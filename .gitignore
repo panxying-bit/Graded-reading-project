@@ -1,0 +1,16 @@
+# Local secrets
+.env
+.env.local
+.env.*.local
+.env.rtf
+.DS_Store
+
+# LaunchAgent / nohup logs for local dev
+.dev-logs/
+
+# Dependencies and build (when you add a runtime)
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc

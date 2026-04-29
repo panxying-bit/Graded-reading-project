@@ -1,0 +1,17 @@
+{
+  "name": "graded-reading-platform",
+  "private": true,
+  "scripts": {
+    "llm:ping": "node server/scripts/llm-ping.mjs",
+    "dev": "npm run dev:all",
+    "dev:all": "concurrently -k -n server,web -c blue,magenta \"npm run server:dev\" \"npm run web:dev\"",
+    "dev:server": "npm run server:dev",
+    "web:dev": "npm --prefix web run dev",
+    "server:dev": "npm --prefix server run dev",
+    "server:dev:once": "npm --prefix server run dev:once",
+    "server:build": "npm --prefix server run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

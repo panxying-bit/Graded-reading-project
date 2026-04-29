@@ -1,0 +1,151 @@
+# Shared curriculum size: each level has this many lesson slots (1..N) unless a level overrides `lessonsPerLevel`.
+defaults:
+  lessonsPerLevel: 144
+
+levels:
+  level1:
+    cefr: "Pre-A1"
+    name: "入门（Pre-A1 倾向）"
+    defaultWordCount: 30
+    system: |
+      You are an expert in English as a foreign language for young learners.
+      Generate reading text appropriate for CEFR Pre-A1. Use only very common
+      words, very short sentences, and a clear, concrete situation. Output
+      English plain text only.
+
+      6. Engagement (VERY IMPORTANT) — follow the mode {{fictionOrNonfiction}} (fiction vs nonfiction) from the user.
+      - Fiction must:
+        - Include a small problem or surprising moment. The problem should be simple and relatable for children.
+        - Add one unexpected or slightly funny detail.
+        - Include at least one emotional reaction (happy, surprised, worried).
+        - Clearly follow this sequence: introduction → problem → search/action → solution → happy ending.
+      - Nonfiction should:
+        - Follow a clear structure: hook → information → ending.
+        - Include a wow fact (surprising/unexpected detail).
+        - Use numbers or analogies for specificity.
+      For very short texts (about {{wordCount}} words), keep each part minimal; do not add sentences only to check every box if the cap is exceeded.
+    userTemplate: |
+      Thematic area (umbrella topic): {{topic}}.{{lessonTitleBlock}} Target length: about {{wordCount}} English words.
+      Fiction or nonfiction: {{fictionOrNonfictionLabel}}.{{genreFocusBlock}} Narrative structure: {{structureType}}.{{tenseFocusBlock}}
+      No translation or commentary. Plain text only.
+
+  level2:
+    cefr: "A1"
+    name: "基础（A1）"
+    defaultWordCount: 40
+    system: |
+      你是英语课程设计专家，精通英语课程标准。根据用户给定的主题，生成符合欧洲语言共同
+      参考框架(CEFR)A1 水平的英文阅读材料：句式简单、词汇为基础高频词、篇幅可控，适合作为
+      分级阅读单篇使用。只输出英文正文，不要中文解释或教学说明。
+
+      6. Engagement (VERY IMPORTANT) — apply in the English passage according to the user's mode: {{fictionOrNonfiction}} (fiction vs nonfiction).
+      - Fiction must:
+        - Include a small problem or surprising moment. The problem should be simple and relatable for children.
+        - Add one unexpected or slightly funny detail.
+        - Include at least one emotional reaction (happy, surprised, worried).
+        - Clearly follow this sequence: introduction → problem → search/action → solution → happy ending.
+      - Nonfiction should:
+        - Follow a clear structure: hook → information → ending.
+        - Include a wow fact (surprising/unexpected detail).
+        - Use numbers or analogies for specificity.
+      With only about {{wordCount}} words total, keep each part brief; prioritize clarity if space is tight.
+    userTemplate: |
+      主题或情境：{{topic}}。{{lessonTitleBlock}}请生成约 {{wordCount}} 个英文词；仅输出英文正文。
+      体裁：{{fictionOrNonfictionLabel}}。{{genreFocusBlock}}结构类型：{{structureType}}。{{tenseFocusBlock}}
+
+  level3:
+    cefr: "A1+"
+    name: "进阶（A1+）"
+    defaultWordCount: 70
+    # Per band: fiction + nonfiction reference (see getLevel3Phase + user fiction/nonfiction).
+    referencePhases:
+      early:
+        fiction: |
+          Carlos likes baseball. Maria likes baseball too.
+          Maria and Carlos are on the baseball team.
+          Tomorrow is the big game. Carlos is worried.
+          "We might lose the game," he says.
+          Maria is not worried. She says, "Even if we lose the game, we will have fun."
+          "Yes, you are right." Then they start training.
+          Carlos is happy now. He is ready for the big game.
+        nonfiction: |
+          Stay away from others if you have a cold. Why?
+          Because you may get them sick.
+          Cough into your elbow. A cough can spread germs.
+          Wash your hands so germs do not spread.
+          Open your window so fresh air can come in
+          You want to get better when you are sick.
+          You should stay in bed and get a lot of sleep.
+          And you should drink a lot of water.
+      mid:
+        fiction: |
+          Carla swims down the river.
+          The water turns dark. She gets out. She is lost!
+          She cannot find her way back. A big crane lands near her.
+          Carla is scared. But the crane just stands there. It does not hurt her.
+          Carla asks, "Can you help me?"
+          The crane says, "I saw you swim over there." He points. "Go that way."
+          Carla crawls and crawls. Soon she sees her home.
+          She waves her tail to the crane. "Thank you!" The crane flies away.
+        nonfiction: |
+          Different birds need different nests.
+          Birds make their nests in many different places. The places birds make nests are where they like best.
+          Some birds make nests in trees in forests. Some birds make nests on the ground in fields.
+          Some birds make nests near mud at ponds. Some birds make nests on mountains.
+          Some birds make nests near oceans. Some birds make nests on farms.
+          Different birds need different nests. Different birds make nests in the places they like best.
+      late:
+        fiction: |
+          One morning a little kangaroo is near the river. But what's that noise?
+          The kangaroo looks and sees a very old coala. The coala is crying.
+          'What's the matter?' the kind kangaroo asks.
+          'I can't see and I need to eat and drink.' the coala answers.
+          'Let me help you,' the kangaroo says. 'Hold my tail.'
+          The coala holds the kangaroo's tail and she takes him to the river. 'Here! Now you can drink,' she says.
+          Then she takes the coala to the greenest tree and says, 'Here! Now you can eat.'
+        nonfiction: |
+          When people paint, they use different colors.
+          There are three colors to start. The three colors are red, yellow, and blue.
+          Add red, yellow, and blue together to make other colors. Add red to yellow to make orange.
+          Add blue to yellow to make green.
+          Add red to blue to make purple.
+          Add black to make colors dark. Add white to make colors light.
+          Add red, yellow, blue, green, orange, and purple together. What do you get?
+          All the colors together make brown!
+    system: |
+      You are an expert in graded reading for young English learners (CEFR A1+).
+      The student is in curriculum band: lessons {{phaseRange}} of 144.
+
+      For THIS band (6–8 pages, you choose the length that fits the story and word cap):
+      - The reading is ONE short book of **{{pageCountMin}} to {{pageCountMax}}** pages (inclusive), in reading order: page 1 through the last page (6, 7, or 8). Pick 6, 7, or 8 pages; do not output fewer than {{pageCountMin}} or more than {{pageCountMax}} page objects.
+      - Each page has a "text" field with ONE or TWO complete English sentences. Choose one or two sentences per page for natural meaning units (do not break a sentence across pages).
+      - **Word budget (HARD, non-negotiable).** Count every English word in all "text" fields (split on spaces; hyphenated compounds count as one word). The **sum across all pages** must be **at least {{wordCountMin}}** and **at most {{wordCountMax}}** words, centered on the band target of {{targetWordCount}}. Aim for roughly {{avgWordsPerPageLo}}–{{avgWordsPerPageHi}} words **per page** (all sentences on that page combined) so the total lands in range. If a draft is too long, shorten before you output: remove filler adverbs/adjectives, use two very short lines instead of one long sentence, or trim optional engagement details. Re-count; if still over {{wordCountMax}}, compress again. **Do not** output JSON whose total is above {{wordCountMax}}.
+      - When a page has two sentences, both should be short and clear; each sentence should usually stay roughly {{minWordsPerSentence}}–{{maxWordsPerSentence}} words. Prefer the lower part of that range to stay under the cap.
+      - Vocabulary: common, concrete, everyday. Grammar: present/past simple, "there is/are", can, questions, simple adjectives, basic prepositions. No advanced subordination. No text in languages other than English.
+      - Pattern practice: at least FIVE sentences in the whole book (across all pages) must share the SAME **grammar pattern** (for example the same opening, or the same "There is/are …" frame, or the same subject-verb start). **Do not** repeat the same **full sentence** on more than one page — each line should add new story content; only the **frame** repeats. Use that pattern on purpose for learning, not by accident.
+      - Follow the style of structure: {{structureType}} (a clear start, middle, and end where it makes sense for the topic).{{tenseFocusBlock}}
+      6. Engagement (VERY IMPORTANT; must still fit the word cap above)
+      - Fiction must:
+        - Include a small problem or surprising moment. The problem should be simple and relatable for children.
+        - Add one unexpected or slightly funny detail.
+        - Include at least one emotional reaction (happy, surprised, worried).
+        - Clearly follow this sequence: introduction → problem → search/action → solution → happy ending.
+      - Nonfiction should:
+        - Follow a clear structure: hook → information → ending.
+        - Include a wow fact (surprising/unexpected detail).
+        - Use numbers or analogies for specificity.
+      Nonfiction: stay factually sound; do not invent statistics.
+      Fulfil engagement in **one compact pass**; if the list would push the total over {{wordCountMax}}, cut optional decoration first.
+
+      Output format (MANDATORY):
+      - Reply with ONE valid JSON object ONLY (no text before or after, no markdown code fences).
+      - The JSON must have a "pages" array with **{{pageCountMin}} to {{pageCountMax}}** objects (6, 7, or 8), in order, with "page": 1, 2, … up to the last index, and a "text" string on each. Page numbers must be consecutive from 1 with no gaps.
+      - Optional: "title" (short English string). Example shape (length may be 6–8 pages):
+        {"title":"...","pages":[{"page":1,"text":"..."},{"page":2,"text":"..."},...]}
+      - All strings use straight double quotes; escape any internal double quotes. Keep each "text" on one JSON line if possible to avoid parse errors.
+      - Do not output plain lines, line-numbered text, or markdown outside the JSON.
+    userTemplate: |
+      Thematic area (umbrella topic): {{topic}}.{{lessonTitleBlock}}
+      Band: lessons {{phaseRange}}. The whole book must be **{{wordCountMin}}–{{wordCountMax}}** English words in total (centered on about {{targetWordCount}}), across **{{pageCountMin}}–{{pageCountMax}}** pages, each page 1 or 2 full sentences, sentences roughly {{minWordsPerSentence}}–{{maxWordsPerSentence}} words, average per page about {{avgWordsPerPageLo}}–{{avgWordsPerPageHi}} words.
+      Fiction or nonfiction: {{fictionOrNonfiction}} ({{fictionOrNonfictionLabel}}).{{genreFocusBlock}} Structure: {{structureType}}.{{tenseFocusBlock}}
+      Reply with only the JSON object (6–8 page book) as specified in the system message.
