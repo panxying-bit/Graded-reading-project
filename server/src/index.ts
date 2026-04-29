@@ -516,10 +516,15 @@ app.post<{
       message: "No text to analyze after parsing (empty or invalid).",
     });
   }
+  const hasTeacherNote = Boolean(patternExtraInstructions?.trim());
+  const spTemperature = hasTeacherNote ? 0.55 : 0.35;
   const system: ChatMessage = {
     role: "system",
     content:
-      "You are an expert in English for young and teenage learners. Follow the user instructions exactly. Reply with a single valid JSON object only, no markdown code fences, no extra keys.",
+      "You are an expert in English for young and teenage learners. Follow the user instructions exactly. Reply with a single valid JSON object only, no markdown code fences, no extra keys." +
+      (hasTeacherNote
+        ? " When a teacher re-analysis block is present, it overrides a generic choice: search the full passage, select pattern and example to satisfy the teacher, not only the first part of the text."
+        : ""),
   };
   const user: ChatMessage = {
     role: "user",
@@ -534,7 +539,7 @@ app.post<{
   try {
     try {
       raw = await callChatCompletions(messages, {
-        temperature: 0.35,
+        temperature: spTemperature,
         responseFormat: { type: "json_object" },
       });
     } catch (e) {
@@ -542,7 +547,7 @@ app.post<{
         request.log.warn(
           "sentence-pattern: retrying without response_format (provider may not support json_object mode)",
         );
-        raw = await callChatCompletions(messages, { temperature: 0.35 });
+        raw = await callChatCompletions(messages, { temperature: spTemperature });
       } else {
         throw e;
       }

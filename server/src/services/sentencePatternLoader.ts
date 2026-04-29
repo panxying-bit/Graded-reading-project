@@ -19,26 +19,48 @@ export function getSentencePatternPromptTemplate(): string {
   return cached;
 }
 
-const TEACHER_NOTES_EN =
-  "Teacher instructions (MUST follow — re-choose the pattern, example sentence, and all JSON fields to satisfy this; the previous run may be suboptimal):";
+const TEACHER_LEAD = `## Re-analysis — teacher is changing the target pattern
 
+**Read this block first. It overrides a generic "most representative" choice.**
+
+- Search the **entire** passage below, including the **last pages/paragraphs**, not only the opening. Long books often contain the best match for the teacher in a later part.
+- Pick \`exampleSentence\` and \`pattern\` that **satisfy the teacher's text** (teachers may write in Chinese, English, or both).
+- Do not repeat a previous or first-paragraph default if the teacher asks for something else from the same passage.
+- The teacher's line appears again after the full passage as a final reminder; both copies are binding.
+
+**Teacher (binding):**`;
+
+const TEACHER_TRAIL = `
+
+---
+
+**Reminder (same as above — still binding; pick pattern + example to match this, scanning the full passage):**
+`;
+
+/**
+ * When teacher instructions exist, they are prepended and repeated at the end so
+ * long multi-page passages (Level 3) do not bury them after the user message.
+ */
 export function buildSentencePatternUserMessage(
   passage: string,
   cefr: string,
   patternExtraInstructions?: string,
 ): string {
   const tpl = getSentencePatternPromptTemplate();
-  let s = tpl.replaceAll("{{cefr}}", cefr).replaceAll("{{文章}}", passage);
+  const base = tpl
+    .replaceAll("{{cefr}}", cefr)
+    .replaceAll("{{文章}}", passage);
   const note = patternExtraInstructions?.trim();
-  if (note) {
-    s += `
+  if (!note) {
+    return base;
+  }
+  return `${TEACHER_LEAD}
+${note}
 
 ---
 
-**${TEACHER_NOTES_EN}**
-
+${base}
+${TEACHER_TRAIL}
 ${note}
 `;
-  }
-  return s;
 }

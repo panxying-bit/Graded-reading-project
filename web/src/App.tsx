@@ -19,6 +19,7 @@ import { getLevel3Phase, getLevel3WordCountBounds } from "./level3Phase";
 import {
   getLesson,
   isUsableSentencePatternSnapshot,
+  resolveLessonTextForExport,
   saveLesson,
   type SentencePatternSnapshot,
 } from "./lessonLibrary";
@@ -82,12 +83,21 @@ export function App() {
   }, [lessonNum]);
 
   const lessonsPerLevel = levels.find((l) => l.id === level)?.lessonsPerLevel ?? 144;
+  /** LocalStorage + UI slot (1..N); must match 当前第几课, not raw lessonNum when that exceeds N. */
+  const lessonSlot = Math.max(1, Math.min(lessonNum, lessonsPerLevel));
+
+  useEffect(() => {
+    if (!level || !Number.isFinite(lessonsPerLevel) || lessonsPerLevel < 1) {
+      return;
+    }
+    if (lessonNum > lessonsPerLevel) {
+      setLessonNum(lessonsPerLevel);
+    }
+  }, [level, lessonNum, lessonsPerLevel]);
 
   const curriculumRow =
     level === "level3" && lessonPlan
-      ? lessonPlan.lessons.find(
-          (r) => r.lesson === Math.min(lessonNum, lessonsPerLevel),
-        )
+      ? lessonPlan.lessons.find((r) => r.lesson === lessonSlot)
       : undefined;
   const curriculumTheme = curriculumRow?.theme;
   const curriculumLessonTitle = curriculumRow?.lessonTitle;
@@ -96,9 +106,9 @@ export function App() {
     level === "level3" && curriculumLessonTitle?.trim(),
   );
 
-  const l3phase = level === "level3" ? getLevel3Phase(lessonNum) : null;
+  const l3phase = level === "level3" ? getLevel3Phase(lessonSlot) : null;
   const l3WordBounds = l3phase
-    ? getLevel3WordCountBounds(lessonNum)
+    ? getLevel3WordCountBounds(lessonSlot)
     : null;
 
   useEffect(() => {
@@ -143,7 +153,7 @@ export function App() {
     if (!level || !levels.length) {
       return;
     }
-    const n = Math.min(lessonNum, lessonsPerLevel);
+    const n = lessonSlot;
     const rec = getLesson(level, n);
     if (level === "level3" && !lessonPlan?.lessons?.length) {
       if (rec?.topic) {
@@ -195,7 +205,7 @@ export function App() {
     }
     // Non–level3: no lesson title field; keep state clean for API.
     setLessonTitle("");
-  }, [level, lessonNum, lessonPlan, lessonsPerLevel, levels.length]);
+  }, [level, lessonSlot, lessonPlan, lessonsPerLevel, levels.length]);
 
   // Word count: level3 follows lesson band (70/80/90); others use server defaultWordCount.
   useEffect(() => {
@@ -203,14 +213,14 @@ export function App() {
       return;
     }
     if (level === "level3") {
-      setWordCount(getLevel3Phase(lessonNum).targetWords);
+      setWordCount(getLevel3Phase(lessonSlot).targetWords);
       return;
     }
     const cfg = levels.find((l) => l.id === level);
     if (cfg && typeof cfg.defaultWordCount === "number") {
       setWordCount(cfg.defaultWordCount);
     }
-  }, [level, levels, lessonNum]);
+  }, [level, levels, lessonSlot]);
 
   // When user switches level / lesson, load that slot from the local library.
   useEffect(() => {
@@ -219,7 +229,7 @@ export function App() {
     }
     const c = levels.find((l) => l.id === level);
     setMeta({ level, cefr: c?.cefr });
-    const rec = getLesson(level, lessonNum);
+    const rec = getLesson(level, lessonSlot);
     setOut(rec?.text ?? null);
     setOutEditing(false);
     if (level === "level3") {
@@ -238,7 +248,7 @@ export function App() {
     }
     setPatternError(null);
     setPatternNotes("");
-  }, [level, lessonNum, levels]);
+  }, [level, lessonSlot, levels]);
 
   // Re-hydrate 句型 from localStorage after 分析保存 / 任意 save 引起的 libVersion 变化
   // (wider than snap?.pattern so 例句 alone still restores; save 失败不 bump 时不会清掉已显示句型)
@@ -246,14 +256,14 @@ export function App() {
     if (!level || !levels.length) {
       return;
     }
-    const rec2 = getLesson(level, lessonNum);
+    const rec2 = getLesson(level, lessonSlot);
     const s = rec2?.sentencePatternSnapshot;
     if (s && isUsableSentencePatternSnapshot(s)) {
       setSentencePattern(s as unknown as SentencePatternResponse);
     } else {
       setSentencePattern(null);
     }
-  }, [libVersion, level, lessonNum, levels.length]);
+  }, [libVersion, level, lessonSlot, levels.length]);
 
   useEffect(() => {
     if (level !== "level3") {
@@ -270,7 +280,7 @@ export function App() {
     if (!level) {
       return;
     }
-    const slotLesson = lessonNum;
+    const slotLesson = lessonSlot;
     setGenError(null);
     setLevel3GenStats(null);
     setLoading(true);
@@ -344,7 +354,7 @@ export function App() {
     if (level !== "level3") {
       return;
     }
-    const slotLesson = lessonNum;
+    const slotLesson = lessonSlot;
     setGenError(null);
     setLoading(true);
     try {
@@ -415,7 +425,7 @@ export function App() {
       setGenError("请先生成初稿或粘贴初稿 JSON，再精修。");
       return;
     }
-    const slotLesson = lessonNum;
+    const slotLesson = lessonSlot;
     setGenError(null);
     setLevel3GenStats(null);
     setLoading(true);
@@ -469,7 +479,7 @@ export function App() {
       setGenError("请先完成精修（或粘贴精修 JSON），再语言校核定稿。");
       return;
     }
-    const slotLesson = lessonNum;
+    const slotLesson = lessonSlot;
     setGenError(null);
     setLevel3GenStats(null);
     setLoading(true);
@@ -513,8 +523,20 @@ export function App() {
     if (level !== "level1" && level !== "level2" && level !== "level3") {
       return;
     }
-    const t = out?.trim();
+    // Use lesson storage as fallback when `out` is stale/empty; level3 also falls back
+    // from empty `text` to 精修/初稿 (same as export) — see resolveLessonTextForExport.
+    const recSp = getLesson(level, lessonSlot);
+    const fromStore = recSp
+      ? resolveLessonTextForExport(level, recSp)
+      : null;
+    // Prefer the longer of in-memory vs persisted (整书定稿 is usually longer; stale `out` can be short)
+    const oTrim = (out?.trim() || "");
+    const sTrim = (fromStore?.trim() || "");
+    const t = (oTrim.length >= sTrim.length ? oTrim : sTrim).trim() || oTrim || sTrim;
     if (!t) {
+      setPatternError(
+        "定稿正文为空，无法分析句型。请确认本课有定稿内容后再点「按说明重新分析」或「重新分析句型」。",
+      );
       return;
     }
     setPatternError(null);
@@ -538,7 +560,7 @@ export function App() {
         variations: r.variations,
         teachingFocus: r.teachingFocus,
       };
-      const saved = saveLesson(level, lessonNum, {
+      const saved = saveLesson(level, lessonSlot, {
         text: t,
         wordCount: w,
         topic: topic.trim() || undefined,
@@ -617,7 +639,7 @@ export function App() {
     }
     const t = outDraft;
     const w = countWordsInModelOutput(t);
-    saveLesson(level, lessonNum, {
+    saveLesson(level, lessonSlot, {
       text: t,
       wordCount: w,
       topic: topic.trim() || undefined,
@@ -676,7 +698,7 @@ export function App() {
     }
     const t = l3DraftBuffer;
     setL3Draft(t);
-    saveLesson(level, lessonNum, {
+    saveLesson(level, lessonSlot, {
       text: out ?? "",
       wordCount: countWordsInModelOutput(out ?? ""),
       topic: topic.trim() || undefined,
@@ -718,7 +740,7 @@ export function App() {
         ? out
         : t;
     const w = countWordsInModelOutput(nextText);
-    saveLesson(level, lessonNum, {
+    saveLesson(level, lessonSlot, {
       text: nextText,
       wordCount: w,
       topic: topic.trim() || undefined,
@@ -763,7 +785,7 @@ export function App() {
     const prevRefined = l3Refined;
     const syncFinal = out == null || out === prevRefined;
     const nextFinal = syncFinal ? draft : out;
-    saveLesson(level, lessonNum, {
+    saveLesson(level, lessonSlot, {
       text: nextFinal ?? "",
       wordCount: countWordsInModelOutput(nextFinal ?? ""),
       topic: topic.trim() || undefined,
@@ -1634,7 +1656,7 @@ export function App() {
             onAnalyze={() => {
               void runSentencePattern();
             }}
-            disableAnalyze={loading}
+            disableAnalyze={patternLoading}
           />
         )}
     </div>

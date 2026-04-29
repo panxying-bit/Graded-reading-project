@@ -15,6 +15,7 @@ Find ONE core sentence pattern that best represents the passage.
 
 Step 2: Representative Sentence
 Select ONE sentence from the text that best matches this pattern. You will repeat it **verbatim** in the JSON field `exampleSentence` (must match the passage character-for-character, including spaces and punctuation, so it can be highlighted in the app).
+- If a **re-analysis** block (teacher request) appears in the same message, you MUST scan the **full** passage, including the **latter half / last pages**, to find an `exampleSentence` and pattern that satisfy the teacher, not just the first reasonable hit from the start.
 
 Step 3: Why this pattern
 Explain briefly:
@@ -59,4 +60,4 @@ Passage (plain text; may be multiple short paragraphs from a book):
 Field rules:
 - `variations` must have exactly 3 strings.
 - `exampleSentence` must be copied exactly from the passage above.
-- If a **Teacher instructions** block appears *after* this output-format section, treat it as binding: use it to **select a different (or better) pattern and example** than a default first choice; still follow all CEFR and JSON rules.
+- If a **re-analysis / teacher** block appears in the same user message (before or after this section), treat it as binding: use it to **select a different (or better) pattern and example** than a default first choice, **searching the full passage**; still follow all CEFR and JSON rules.
