@@ -8,6 +8,7 @@ import {
   displayStructure,
   displayTense,
 } from "./exportDisplayLabels";
+import { buildSentencePatternHtmlSection } from "./lessonPatternExport";
 import {
   getLesson,
   getLessonWordCount,
@@ -96,9 +97,19 @@ export function buildLessonsHtmlDocument(options: {
       )
       .join("");
 
+    const sp = rec.sentencePatternSnapshot;
+    const patternHtml =
+      sp?.pattern && sp.exampleSentence
+        ? buildSentencePatternHtmlSection(sp, escapeHtml)
+        : "";
+    const patternSep = patternHtml
+      ? `<hr class="sp-sep" />${patternHtml}`
+      : "";
+
     sections.push(`<section class="card" id="${id}">
 <header class="card-h"><h2>第 ${n} 课</h2></header>
 <table class="meta" aria-label="第 ${n} 课元数据">${metaRows}</table>
+${patternSep}
 <h3 class="body-h">课文正文</h3>
 <pre class="body" lang="en">${body}</pre>
 </section>`);
@@ -124,12 +135,19 @@ export function buildLessonsHtmlDocument(options: {
   .meta td { padding: 0.2rem 0; }
   .body-h { font-size: 0.95rem; margin: 0.9rem 0 0.4rem; }
   .body { margin: 0; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.88rem; white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; }
+  .sp-export h3 { font-size: 1rem; margin: 0.5rem 0 0.35rem; }
+  .sp-export h4 { font-size: 0.88rem; margin: 0.5rem 0 0.2rem; color: #374151; }
+  .sp-export .en, .sp-export p { margin: 0.2rem 0; font-size: 0.9rem; white-space: pre-wrap; }
+  .sp-export .ex { background: #fff9db; padding: 0.35rem 0.5rem; border-radius: 4px; }
+  .sp-export .sp-meta, .sp-export .sp-note { font-size: 0.8rem; color: #4b5563; }
+  .sp-export ol { margin: 0.2rem 0 0.4rem 1.1rem; padding: 0; }
+  .sp-sep { border: none; border-top: 1px dashed #dee2e6; margin: 0.75rem 0; }
   @media print { body { background: #fff; } .card { border-color: #ccc; } }
 </style>
 </head>
 <body>
 <h1>${escapeHtml(title)}</h1>
-<p class="intro">本页由分级阅读平台在本机生成，含所选课次的元数据与课文正文。可用浏览器「打印」另存为 PDF。课文与 <code>ZIP</code> 中的单课 <code>.txt</code> 为同一套内容；若为 JSON 绘本数据，已展开为可读的按页纯文本。</p>
+<p class="intro">本页由分级阅读平台在本机生成，含所选课次的元数据、在页内已做的「句型与例句」分析（若有）与课文正文。可用浏览器「打印」另存为 PDF。课文与 <code>ZIP</code> 中的单课 <code>.txt</code> 为同一套内容；若为 JSON 绘本数据，已展开为可读的按页纯文本。</p>
 ${sections.join("\n")}
 </body>
 </html>

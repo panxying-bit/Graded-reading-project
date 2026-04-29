@@ -6,10 +6,24 @@
 import { countWordsInModelOutput } from "./parseBookOutput";
 const STORAGE_KEY = "graded-reading.lessonLibrary.v1";
 
+/** Persisted 句型分析 result (same as API, for download + reload). */
+export type SentencePatternSnapshot = {
+  level: string;
+  cefr: string;
+  pattern: string;
+  exampleSentence: string;
+  exampleMatchedInText: boolean;
+  whyPattern: string;
+  variations: string[];
+  teachingFocus: string;
+};
+
 export type LessonRecord = {
   text: string;
   wordCount: number;
   updatedAt: string;
+  /** Last successful 句型与例句分析 (定稿为基准). Cleared when 定稿/课文内容重新保存. */
+  sentencePatternSnapshot?: SentencePatternSnapshot;
   /** Level3 stage-1 draft JSON (before word/page refine). Optional for older saves. */
   level3DraftText?: string;
   /** Level3 stage-2 精修 JSON (page/word bands). */
@@ -86,19 +100,47 @@ function readStore(): StoreV1 {
   return emptyStore();
 }
 
-function writeStore(s: StoreV1): void {
+function writeStore(s: StoreV1): boolean {
   if (typeof localStorage === "undefined") {
-    return;
+    return false;
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    return true;
   } catch {
     // quota or private mode
+    return false;
   }
 }
 
 function lessonKey(n: number): string {
   return String(n);
+}
+
+/** True if a snapshot can rehydrate the 句型 UI (tolerant of field quirks). */
+export function isUsableSentencePatternSnapshot(
+  s: unknown,
+): s is SentencePatternSnapshot {
+  if (!s || typeof s !== "object") {
+    return false;
+  }
+  const o = s as Record<string, unknown>;
+  if (String(o.pattern ?? "").trim().length > 0) {
+    return true;
+  }
+  if (String(o.exampleSentence ?? "").trim().length > 0) {
+    return true;
+  }
+  if (Array.isArray(o.variations) && o.variations.length > 0) {
+    return true;
+  }
+  if (
+    String(o.whyPattern ?? "").trim().length > 0 ||
+    String(o.teachingFocus ?? "").trim().length > 0
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function getLesson(
@@ -129,10 +171,12 @@ export function saveLesson(
     level3DraftText?: string;
     /** When set, updates stage-2 精修; when omitted, previous value is kept if any. */
     level3RefinedText?: string;
+    /** Set to a snapshot after 句型分析; use `null` to clear. */
+    sentencePatternSnapshot?: SentencePatternSnapshot | null;
   },
-): void {
+): boolean {
   if (lessonIndex < 1) {
-    return;
+    return false;
   }
   const s = readStore();
   if (!s.byLevel[levelId]) {
@@ -160,8 +204,15 @@ export function saveLesson(
   } else if (prev?.level3RefinedText) {
     next.level3RefinedText = prev.level3RefinedText;
   }
+  if (data.sentencePatternSnapshot === null) {
+    delete next.sentencePatternSnapshot;
+  } else if (data.sentencePatternSnapshot !== undefined) {
+    next.sentencePatternSnapshot = data.sentencePatternSnapshot;
+  } else if (prev?.sentencePatternSnapshot) {
+    next.sentencePatternSnapshot = prev.sentencePatternSnapshot;
+  }
   s.byLevel[levelId]![lessonKey(lessonIndex)] = next;
-  writeStore(s);
+  return writeStore(s);
 }
 
 /** How many lessons in [1, max] have saved content. */

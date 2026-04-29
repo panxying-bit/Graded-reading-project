@@ -884,3 +884,170 @@ details.dl-panel > summary.dl-title::-webkit-details-marker {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.88rem;
 }
+
+/* Sentence pattern (post–定稿 分析) */
+.sp-block {
+  margin-top: 1.25rem;
+}
+
+.sp-block-head {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sp-block-lead {
+  margin: 0.4rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #3d4f5c;
+  max-width: 44rem;
+}
+
+.sp-code {
+  font-size: 0.82em;
+  padding: 0.1em 0.3em;
+  background: #eef2f4;
+  border-radius: 0.25rem;
+}
+
+.sp-block-actions {
+  margin-top: 0.5rem;
+}
+
+.sp-block-actions--first {
+  margin-top: 0.35rem;
+}
+
+.sp-notes-wrap--after-result {
+  margin-top: 1rem;
+  max-width: 100%;
+}
+
+.sp-block-actions--reanalyze {
+  margin-top: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.sp-notes-wrap {
+  margin: 0.5rem 0 0.35rem;
+  padding: 0.5rem 0.65rem 0.55rem;
+  background: #f6f7fb;
+  border: 1px solid #d8dee6;
+  border-radius: 0.4rem;
+  max-width: 44rem;
+}
+
+.sp-notes-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a3652;
+  margin: 0 0 0.2rem;
+}
+
+.sp-notes-hint {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #4a5c66;
+}
+
+.sp-notes-ta {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 3.2rem;
+  line-height: 1.4;
+  padding: 0.5rem 0.55rem;
+  font-size: 0.92rem;
+  border: 1px solid #b8c0cc;
+  border-radius: 0.35rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.sp-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.sp-card {
+  padding: 0.75rem 0.9rem;
+  background: #fbfcfd;
+  border: 1px solid #e2e8ec;
+  border-radius: 0.45rem;
+}
+
+.sp-h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  color: #0d4a42;
+}
+
+.sp-pattern {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #1a2e35;
+}
+
+.sp-meta {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: #5a6b75;
+}
+
+.sp-why,
+.sp-focus {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #1a252d;
+}
+
+.sp-var-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: #1a252d;
+}
+
+.sp-var-list li {
+  margin: 0.2rem 0;
+}
+
+.sp-card-passage {
+  background: #fff;
+}
+
+.sp-warn {
+  font-size: 0.86rem;
+  color: #7a4a12;
+  background: #fff7e6;
+  border: 1px solid #e8d4a8;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.35rem;
+  margin: 0 0 0.5rem;
+}
+
+.sp-reread {
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  border: 1px solid #e0e6ea;
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  background: #fff;
+}
+
+mark.sp-highlight,
+.sp-highlight {
+  background: #fff3bf;
+  color: inherit;
+  padding: 0.05em 0.1em;
+  border-radius: 0.2em;
+}

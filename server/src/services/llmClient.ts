@@ -28,7 +28,10 @@ function chatCompletionsUrl(baseUrl: string): string {
  */
 export async function callChatCompletions(
   messages: ChatMessage[],
-  options?: { temperature?: number },
+  options?: {
+    temperature?: number;
+    responseFormat?: { type: "json_object" };
+  },
 ): Promise<string> {
   try {
     assertLlmEnv();
@@ -53,10 +56,14 @@ export async function callChatCompletions(
     temperature?: number;
     messages: ChatMessage[];
     max_tokens?: number;
+    response_format?: { type: "json_object" };
   } = {
     model: env.llmModel,
     messages,
   };
+  if (options?.responseFormat) {
+    body.response_format = options.responseFormat;
+  }
   if (!llmShouldOmitTemperature()) {
     body.temperature = options?.temperature ?? 0.7;
   }

@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import {
+  analyzeSentencePattern,
   fetchLessonPlan,
   fetchLevels,
   generateDraft,
@@ -9,17 +10,24 @@ import {
   type Level3WordCountField,
   type LevelItem,
   type LessonPlan,
+  type SentencePatternResponse,
 } from "./api/client";
 import { DEFAULT_STRUCTURE, STRUCTURE_TYPES } from "./structureOptions";
 import { DEFAULT_TENSE_FOCUS, TENSE_FOCUS_OPTIONS } from "./tenseOptions";
 import { DEFAULT_GENRE_FOCUS, GENRE_FOCUS_OPTIONS } from "./genreOptions";
 import { getLevel3Phase, getLevel3WordCountBounds } from "./level3Phase";
-import { getLesson, saveLesson } from "./lessonLibrary";
+import {
+  getLesson,
+  isUsableSentencePatternSnapshot,
+  saveLesson,
+  type SentencePatternSnapshot,
+} from "./lessonLibrary";
 import { LessonDownloadPanel } from "./LessonDownloadPanel";
 import { LessonPanel } from "./LessonPanel";
 import { PromptEditorPanel } from "./PromptEditorPanel";
 import { BookDraftEditor } from "./BookDraftEditor";
 import { ReadingOutput } from "./ReadingOutput";
+import { SentencePatternBlock } from "./SentencePatternBlock";
 import {
   bookToPlainText,
   countWordsInModelOutput,
@@ -61,6 +69,13 @@ export function App() {
   const [l3RefinedBuffer, setL3RefinedBuffer] = useState("");
   /** Shown in 第一阶段 when a draft exists; problems & revision direction for (re)generate draft. */
   const [l3DraftNotes, setL3DraftNotes] = useState("");
+  /** After 定稿: teachable pattern + example + variations (config/sentence-pattern-prompt.md). */
+  const [sentencePattern, setSentencePattern] =
+    useState<SentencePatternResponse | null>(null);
+  const [patternLoading, setPatternLoading] = useState(false);
+  const [patternError, setPatternError] = useState<string | null>(null);
+  /** Optional notes when re-running sentence-pattern (like 初稿修改说明). */
+  const [patternNotes, setPatternNotes] = useState("");
   const lessonRef = useRef(lessonNum);
   useEffect(() => {
     lessonRef.current = lessonNum;
@@ -221,7 +236,24 @@ export function App() {
       setL3RefinedEditing(false);
       setL3DraftNotes("");
     }
+    setPatternError(null);
+    setPatternNotes("");
   }, [level, lessonNum, levels]);
+
+  // Re-hydrate 句型 from localStorage after 分析保存 / 任意 save 引起的 libVersion 变化
+  // (wider than snap?.pattern so 例句 alone still restores; save 失败不 bump 时不会清掉已显示句型)
+  useEffect(() => {
+    if (!level || !levels.length) {
+      return;
+    }
+    const rec2 = getLesson(level, lessonNum);
+    const s = rec2?.sentencePatternSnapshot;
+    if (s && isUsableSentencePatternSnapshot(s)) {
+      setSentencePattern(s as unknown as SentencePatternResponse);
+    } else {
+      setSentencePattern(null);
+    }
+  }, [libVersion, level, lessonNum, levels.length]);
 
   useEffect(() => {
     if (level !== "level3") {
@@ -287,6 +319,7 @@ export function App() {
         ...(level === "level3"
           ? { level3DraftText: res.text, level3RefinedText: res.text }
           : {}),
+        sentencePatternSnapshot: null,
       });
       setLibVersion((v) => v + 1);
       if (slotLesson === lessonRef.current) {
@@ -298,6 +331,7 @@ export function App() {
           setL3Draft(res.text);
           setL3Refined(res.text);
         }
+        setSentencePattern(null);
       }
     } catch (err) {
       setGenError((err as Error).message);
@@ -354,6 +388,7 @@ export function App() {
         genreFocus: genreFocus.trim() || undefined,
         level3DraftText: draftText,
         level3RefinedText: "",
+        sentencePatternSnapshot: null,
       });
       setLibVersion((v) => v + 1);
       if (slotLesson === lessonRef.current) {
@@ -362,6 +397,7 @@ export function App() {
         setL3Refined("");
         setOut(null);
         setLevel3GenStats(null);
+        setSentencePattern(null);
       }
     } catch (err) {
       setGenError((err as Error).message);
@@ -403,6 +439,7 @@ export function App() {
         genreFocus: genreFocus.trim() || undefined,
         level3DraftText: rawDraft,
         level3RefinedText: res.text,
+        sentencePatternSnapshot: null,
       });
       setLibVersion((v) => v + 1);
       if (slotLesson === lessonRef.current) {
@@ -414,6 +451,7 @@ export function App() {
         setL3DraftEditing(false);
         setMeta({ cefr: res.cefr, level: res.level });
         setLevel3GenStats(res.level3WordCount ?? null);
+        setSentencePattern(null);
       }
     } catch (err) {
       setGenError((err as Error).message);
@@ -453,6 +491,7 @@ export function App() {
         tenseFocus: tenseFocus.trim() || undefined,
         genreFocus: genreFocus.trim() || undefined,
         level3RefinedText: bookText,
+        sentencePatternSnapshot: null,
       });
       setLibVersion((v) => v + 1);
       if (slotLesson === lessonRef.current) {
@@ -461,11 +500,68 @@ export function App() {
         setL3Refined(bookText);
         setL3RefinedEditing(false);
         setMeta({ cefr: res.cefr, level: res.level });
+        setSentencePattern(null);
       }
     } catch (err) {
       setGenError((err as Error).message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function runSentencePattern() {
+    if (level !== "level1" && level !== "level2" && level !== "level3") {
+      return;
+    }
+    const t = out?.trim();
+    if (!t) {
+      return;
+    }
+    setPatternError(null);
+    setPatternLoading(true);
+    try {
+      const note = patternNotes.trim();
+      const r = await analyzeSentencePattern({
+        level,
+        text: t,
+        ...(note ? { patternExtraInstructions: note } : {}),
+      });
+      setSentencePattern(r);
+      const w = countWordsInModelOutput(t);
+      const snap: SentencePatternSnapshot = {
+        level: r.level,
+        cefr: r.cefr,
+        pattern: r.pattern,
+        exampleSentence: r.exampleSentence,
+        exampleMatchedInText: r.exampleMatchedInText,
+        whyPattern: r.whyPattern,
+        variations: r.variations,
+        teachingFocus: r.teachingFocus,
+      };
+      const saved = saveLesson(level, lessonNum, {
+        text: t,
+        wordCount: w,
+        topic: topic.trim() || undefined,
+        lessonTitle:
+          level === "level3" ? lessonTitle.trim() || undefined : undefined,
+        fictionOrNonfiction,
+        structureType,
+        tenseFocus: tenseFocus.trim() || undefined,
+        genreFocus: genreFocus.trim() || undefined,
+        sentencePatternSnapshot: snap,
+      });
+      if (!saved) {
+        setPatternError(
+          "句型已显示在上方，但未能写入本机（如存储已满或隐私模式禁用了本地存储），刷新后可能看不到。可尝试本机有空间、允许 localhost 存数据后，再点一次「按说明重新分析」或「重新分析句型」。",
+        );
+        return;
+      }
+      setLibVersion((v) => v + 1);
+    } catch (e) {
+      setPatternError((e as Error).message);
+      setSentencePattern(null);
+    } finally {
+      setPatternLoading(false);
     }
   }
 
@@ -531,10 +627,12 @@ export function App() {
       structureType,
       tenseFocus: tenseFocus.trim() || undefined,
       genreFocus: genreFocus.trim() || undefined,
+      sentencePatternSnapshot: null,
     });
     setOut(t);
     setLibVersion((v) => v + 1);
     setOutEditing(false);
+    setSentencePattern(null);
   }
 
   function cancelOutEdit() {
@@ -630,12 +728,16 @@ export function App() {
       tenseFocus: tenseFocus.trim() || undefined,
       genreFocus: genreFocus.trim() || undefined,
       level3RefinedText: t,
+      ...(syncFinal ? { sentencePatternSnapshot: null as const } : {}),
     });
     if (syncFinal) {
       setOut(t);
     }
     setLibVersion((v) => v + 1);
     setL3RefinedEditing(false);
+    if (syncFinal) {
+      setSentencePattern(null);
+    }
   }
 
   function cancelL3RefinedEdit() {
@@ -672,6 +774,7 @@ export function App() {
       genreFocus: genreFocus.trim() || undefined,
       level3DraftText: draft,
       level3RefinedText: draft,
+      ...(syncFinal ? { sentencePatternSnapshot: null as const } : {}),
     });
     setL3Refined(draft);
     setL3RefinedEditing(false);
@@ -680,6 +783,9 @@ export function App() {
       setOutEditing(false);
     }
     setLibVersion((v) => v + 1);
+    if (syncFinal) {
+      setSentencePattern(null);
+    }
   }
 
   return (
@@ -1494,7 +1600,14 @@ export function App() {
             </div>
           ) : out ? (
             <div className="text-block">
-              <ReadingOutput text={out} />
+              <ReadingOutput
+                text={out}
+                highlightPhrase={
+                  sentencePattern?.exampleMatchedInText
+                    ? sentencePattern.exampleSentence
+                    : null
+                }
+              />
             </div>
           ) : (
             <p className="out-placeholder">
@@ -1505,6 +1618,25 @@ export function App() {
           )}
         </section>
       )}
+
+      {level &&
+        (level === "level1" || level === "level2" || level === "level3") &&
+        out &&
+        !outEditing && (
+          <SentencePatternBlock
+            levelName={levels.find((l) => l.id === level)?.name ?? level}
+            outText={out}
+            pattern={sentencePattern}
+            patternError={patternError}
+            patternLoading={patternLoading}
+            patternNotes={patternNotes}
+            onPatternNotesChange={setPatternNotes}
+            onAnalyze={() => {
+              void runSentencePattern();
+            }}
+            disableAnalyze={loading}
+          />
+        )}
     </div>
   );
 }

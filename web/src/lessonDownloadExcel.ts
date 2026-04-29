@@ -47,6 +47,11 @@ export function buildLessonsSummaryWorkbook(
     "体裁/具体形式",
     "总词数",
     "保存时间(本地)",
+    "句型(Pattern)",
+    "文中原句(例句)",
+    "为何选此句型",
+    "同难度变体(3句)",
+    "教学重点",
   ];
 
   const rows: Row[] = [headers];
@@ -68,6 +73,11 @@ export function buildLessonsSummaryWorkbook(
           }
         })()
       : "";
+    const sp = rec.sentencePatternSnapshot;
+    const varsStr =
+      sp?.variations?.length === 3
+        ? sp.variations.map((s) => s.trim()).join(" | ")
+        : "";
     rows.push([
       i,
       levelOrder,
@@ -84,6 +94,11 @@ export function buildLessonsSummaryWorkbook(
       displayGenre(rec.genreFocus),
       getLessonWordCount(levelId, n) ?? rec.wordCount,
       updated,
+      sp?.pattern?.trim() ?? "",
+      sp?.exampleSentence?.trim() ?? "",
+      sp?.whyPattern?.trim() ?? "",
+      varsStr,
+      sp?.teachingFocus?.trim() ?? "",
     ]);
   }
 
@@ -104,6 +119,11 @@ export function buildLessonsSummaryWorkbook(
     { wch: 24 },
     { wch: 8 },
     { wch: 20 },
+    { wch: 36 },
+    { wch: 40 },
+    { wch: 36 },
+    { wch: 48 },
+    { wch: 36 },
   ];
 
   const wb = XLSX.utils.book_new();

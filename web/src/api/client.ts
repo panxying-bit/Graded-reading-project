@@ -236,6 +236,41 @@ export async function generateProofread(body: {
   return (await res.json()) as GenerateResponse & { stage: "proofread" };
 }
 
+/** 定稿后：句型结构 + 文中例句 + 同难度变体（与 server/config/sentence-pattern-prompt.md 对齐）。 */
+export type SentencePatternResponse = {
+  level: string;
+  cefr: string;
+  pattern: string;
+  exampleSentence: string;
+  /** True when the model's sentence appears verbatim in the parsed passage. */
+  exampleMatchedInText: boolean;
+  whyPattern: string;
+  variations: string[];
+  teachingFocus: string;
+};
+
+export async function analyzeSentencePattern(body: {
+  level: "level1" | "level2" | "level3";
+  text: string;
+  /** 句型修改说明：对 AI 上一条结果不满意时填写，再重新分析。 */
+  patternExtraInstructions?: string;
+}): Promise<SentencePatternResponse> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/api/learning/sentence-pattern`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw mapNetworkError(e, "句型分析");
+  }
+  if (!res.ok) {
+    throw new Error(await readApiErrorMessage(res));
+  }
+  return (await res.json()) as SentencePatternResponse;
+}
+
 export type ReferencePhaseBand = {
   fiction: string;
   nonfiction: string;

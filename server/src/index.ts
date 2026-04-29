@@ -32,6 +32,13 @@ import {
 } from "./services/imageGenClient.js";
 import { imageGenerateBodySchema } from "./schemas/imageGenerateBody.js";
 import { getLessonPlan } from "./services/lessonCurriculum.js";
+import {
+  sentencePatternBodySchema,
+  sentencePatternResultSchema,
+} from "./schemas/sentencePatternBody.js";
+import { buildSentencePatternUserMessage } from "./services/sentencePatternLoader.js";
+import { extractPassageTextForPattern } from "./utils/extractPassageText.js";
+import type { ChatMessage } from "./services/promptResolver.js";
 
 const app = Fastify({ logger: true });
 
@@ -52,6 +59,8 @@ app.get("/", async () => ({
     "generate-refine": "POST /api/generate/refine (level3 stage 2 精修)",
     "generate-proofread": "POST /api/generate/proofread (level3 stage 3 定稿)",
     "image-generate": "POST /api/images/generate",
+    "sentence-pattern":
+      "POST /api/learning/sentence-pattern (定稿/课文句型+例句+变体; prompt: config/sentence-pattern-prompt.md)",
     "prompts-get-put": "GET|PUT|DELETE /api/prompts/:levelId",
   },
 }));
@@ -478,6 +487,108 @@ app.post<{
       message: "Unexpected server error",
     });
   }
+});
+
+/** After final text: one core pattern, exemplar in text, variations, teaching focus. Prompt: server/config/sentence-pattern-prompt.md */
+app.post<{
+  Body: unknown;
+}>("/api/learning/sentence-pattern", async (request, reply) => {
+  const parsed = sentencePatternBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: "INVALID_BODY",
+      message: parsed.error.flatten().formErrors.join("; ") || "Invalid body",
+    });
+  }
+  const { level, text, patternExtraInstructions } = parsed.data;
+  const def = getLevel(level);
+  if (!def) {
+    return reply.status(400).send({
+      error: "INVALID_LEVEL",
+      message: `Unknown level: ${level}`,
+    });
+  }
+  const cefr = def.cefr ?? "A1";
+  const passage = extractPassageTextForPattern(text);
+  if (!passage.trim()) {
+    return reply.status(400).send({
+      error: "EMPTY_PASSAGE",
+      message: "No text to analyze after parsing (empty or invalid).",
+    });
+  }
+  const system: ChatMessage = {
+    role: "system",
+    content:
+      "You are an expert in English for young and teenage learners. Follow the user instructions exactly. Reply with a single valid JSON object only, no markdown code fences, no extra keys.",
+  };
+  const user: ChatMessage = {
+    role: "user",
+    content: buildSentencePatternUserMessage(
+      passage,
+      cefr,
+      patternExtraInstructions,
+    ),
+  };
+  const messages: ChatMessage[] = [system, user];
+  let raw: string;
+  try {
+    try {
+      raw = await callChatCompletions(messages, {
+        temperature: 0.35,
+        responseFormat: { type: "json_object" },
+      });
+    } catch (e) {
+      if (e instanceof LlmError && e.statusCode === 400) {
+        request.log.warn(
+          "sentence-pattern: retrying without response_format (provider may not support json_object mode)",
+        );
+        raw = await callChatCompletions(messages, { temperature: 0.35 });
+      } else {
+        throw e;
+      }
+    }
+  } catch (e) {
+    if (e instanceof LlmError) {
+      return reply.status(e.statusCode).send({
+        error: e.code,
+        message: e.message,
+      });
+    }
+    request.log.error(e);
+    return reply.status(500).send({
+      error: "INTERNAL",
+      message: "Unexpected server error",
+    });
+  }
+  const stripped = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  let data: unknown;
+  try {
+    data = JSON.parse(stripped) as unknown;
+  } catch {
+    return reply.status(502).send({
+      error: "INVALID_JSON",
+      message: "Model did not return valid JSON for sentence pattern.",
+    });
+  }
+  const out = sentencePatternResultSchema.safeParse(data);
+  if (!out.success) {
+    return reply.status(502).send({
+      error: "SCHEMA",
+      message: out.error.message,
+    });
+  }
+  const { exampleSentence, ...rest } = out.data;
+  const exTrim = exampleSentence.trim();
+  const exampleMatchedInText =
+    passage.includes(exampleSentence) ||
+    (exTrim.length > 0 && passage.includes(exTrim));
+  return {
+    level,
+    cefr,
+    exampleSentence,
+    exampleMatchedInText,
+    ...rest,
+  };
 });
 
 app.post<{

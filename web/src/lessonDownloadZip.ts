@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { buildLessonsHtmlDocument } from "./lessonDownloadHtml";
+import { formatSentencePatternBlockPlain } from "./lessonPatternExport";
 import type { LessonRecord } from "./lessonLibrary";
 import {
   getLesson,
@@ -74,6 +75,11 @@ export function buildExportFileBody(
   }
   head.push(`saved: ${rec.updatedAt ?? ""}`);
   head.push("---");
+  const sp = rec.sentencePatternSnapshot;
+  if (sp?.pattern) {
+    head.push(formatSentencePatternBlockPlain(sp));
+    head.push("---");
+  }
   return head.join("\n") + "\n" + passageText;
 }
 

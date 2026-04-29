@@ -193,12 +193,12 @@ export function LessonDownloadPanel({
       <summary className="dl-title">本级别下载</summary>
       <div className="dl-panel-inner prompt-panel-inner">
         <p className="dl-hint">
-        勾选要导出的课次。<strong>ZIP</strong> 内除每课一个 <code>.txt</code> 外，另有{" "}
+        勾选要导出的课次。<strong>ZIP</strong> 内除每课一个 <code>.txt</code>（元数据后、课文前会附「句型与教学」全文，仅当该课在页面成功做过句型分析并写回本机）外，另有{" "}
         <code>00-lessons-overview.html</code>：在浏览器中打开可查看
-        <strong>全部元数据与完整课文</strong>（无 Excel
+        <strong>元数据、句型与例句区（若有）与完整课文</strong>（无 Excel
         单元格长度限制，适合通读、打印、另存 PDF）。也可单独点「HTML
         全文总览」只下这一份。
-        <strong>Excel 汇总</strong>仍为表格化统计，正文不入表。均在本地生成，不经服务器。
+        <strong>Excel 汇总</strong>含与句型相关的多列，正文长文仍不放入。均在本地生成，不经服务器。
         </p>
       {err && (
         <p className="err" role="alert">

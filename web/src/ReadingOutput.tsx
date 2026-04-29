@@ -1,10 +1,63 @@
+import type { ReactNode } from "react";
 import { tryParseBookOutput, type BookOutput } from "./parseBookOutput";
 
 type Props = {
   text: string;
+  /** If set, first match in each segment is wrapped in <mark> (e.g. sentence-pattern exemplar). */
+  highlightPhrase?: string | null;
 };
 
-function BookView({ book }: { book: BookOutput }) {
+function findHighlightSpan(
+  body: string,
+  phrase: string | null | undefined,
+): { start: number; len: number } | null {
+  if (phrase == null) {
+    return null;
+  }
+  const t = phrase.trim();
+  if (!t) {
+    return null;
+  }
+  let i = body.indexOf(phrase);
+  if (i >= 0) {
+    return { start: i, len: phrase.length };
+  }
+  i = body.indexOf(t);
+  if (i >= 0) {
+    return { start: i, len: t.length };
+  }
+  return null;
+}
+
+function textWithOptionalHighlight(
+  body: string,
+  phrase: string | null | undefined,
+): ReactNode {
+  if (!body) {
+    return null;
+  }
+  const sp = findHighlightSpan(body, phrase);
+  if (!sp) {
+    return body;
+  }
+  return (
+    <>
+      {body.slice(0, sp.start)}
+      <mark className="sp-highlight" lang="en">
+        {body.slice(sp.start, sp.start + sp.len)}
+      </mark>
+      {body.slice(sp.start + sp.len)}
+    </>
+  );
+}
+
+function BookView({
+  book,
+  highlightPhrase,
+}: {
+  book: BookOutput;
+  highlightPhrase?: string | null;
+}) {
   const sorted = [...book.pages].sort((a, b) => a.page - b.page);
   return (
     <div className="book-view">
@@ -24,7 +77,9 @@ function BookView({ book }: { book: BookOutput }) {
               {pg.page}
             </span>
             <div className="book-page-body">
-              <p className="book-page-text">{pg.text}</p>
+              <p className="book-page-text">
+                {textWithOptionalHighlight(pg.text, highlightPhrase)}
+              </p>
               {pg.scene_note?.trim() ? (
                 <p className="book-scene">{pg.scene_note.trim()}</p>
               ) : null}
@@ -36,14 +91,14 @@ function BookView({ book }: { book: BookOutput }) {
   );
 }
 
-export function ReadingOutput({ text }: Props) {
+export function ReadingOutput({ text, highlightPhrase }: Props) {
   const book = tryParseBookOutput(text);
   if (book) {
-    return <BookView book={book} />;
+    return <BookView book={book} highlightPhrase={highlightPhrase} />;
   }
   return (
     <div className="plain-reading" lang="en">
-      {text}
+      {textWithOptionalHighlight(text, highlightPhrase)}
     </div>
   );
 }
