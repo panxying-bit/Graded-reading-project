@@ -1,7 +1,8 @@
 {
   "name": "graded-reading-server",
-  "version": "1.1.1",
+  "version": "5.1.0",
   "private": true,
+  "description": "5.1 — Volc GetResult/50500 策略与日志；/api/images/generate + TTS/词汇等（与根目录同步）",
   "type": "module",
   "engines": {
     "node": ">=18.11.0"
@@ -10,13 +11,17 @@
     "dev": "nodemon",
     "dev:once": "node --import tsx src/index.ts",
     "build": "tsc",
+    "build:wordlist": "python3 scripts/build_mastery_wordlist.py",
+    "build:mastery-l3": "node scripts/build-mastery-l3-from-lesson-library.mjs",
     "start": "node dist/index.js",
     "llm:ping": "node scripts/llm-ping.mjs"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",
+    "@volcengine/openapi": "^1.36.1",
     "dotenv": "^16.4.5",
     "fastify": "^5.1.0",
+    "sharp": "^0.33.5",
     "yaml": "^2.6.0",
     "zod": "^3.23.8"
   },

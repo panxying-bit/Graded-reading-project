@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { buildLessonsHtmlDocument } from "./lessonDownloadHtml";
 import { formatSentencePatternBlockPlain } from "./lessonPatternExport";
+import { formatVocabFinalTablePlain } from "./lessonVocabExport";
 import type { LessonRecord } from "./lessonLibrary";
 import {
   getLesson,
@@ -55,6 +56,9 @@ export function buildExportFileBody(
   if (rec.lessonTitle) {
     head.push(`lessonTitle: ${rec.lessonTitle}`);
   }
+  if (rec.contentBrief?.trim()) {
+    head.push(`contentBrief: ${rec.contentBrief.trim()}`);
+  }
   if (rec.fictionOrNonfiction) {
     head.push(`fictionOrNonfiction: ${rec.fictionOrNonfiction}`);
   }
@@ -78,6 +82,11 @@ export function buildExportFileBody(
   const sp = rec.sentencePatternSnapshot;
   if (sp?.pattern) {
     head.push(formatSentencePatternBlockPlain(sp));
+    head.push("---");
+  }
+  const vfPlain = formatVocabFinalTablePlain(rec.vocabFinalTable?.items);
+  if (vfPlain) {
+    head.push(vfPlain);
     head.push("---");
   }
   return head.join("\n") + "\n" + passageText;

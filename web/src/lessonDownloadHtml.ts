@@ -9,6 +9,7 @@ import {
   displayTense,
 } from "./exportDisplayLabels";
 import { buildSentencePatternHtmlSection } from "./lessonPatternExport";
+import { buildVocabFinalHtmlSection } from "./lessonVocabExport";
 import {
   getLesson,
   getLessonWordCount,
@@ -81,6 +82,7 @@ export function buildLessonsHtmlDocument(options: {
       ],
       ["主题(保存时)", rec.topic?.trim() ?? "—"],
       ["课文标题(保存时)", rec.lessonTitle?.trim() ?? "—"],
+      ["文本内容构思(保存时)", rec.contentBrief?.trim() ?? "—"],
       ["课纲主题", planTheme || "—"],
       ["课纲课文标题", planLt || "—"],
       ["结构类型", displayStructure(rec.structureType) || "—"],
@@ -105,11 +107,18 @@ export function buildLessonsHtmlDocument(options: {
     const patternSep = patternHtml
       ? `<hr class="sp-sep" />${patternHtml}`
       : "";
+    const vfItems = rec.vocabFinalTable?.items;
+    const vocabHtml =
+      vfItems && vfItems.length > 0
+        ? buildVocabFinalHtmlSection(vfItems, escapeHtml)
+        : "";
+    const vocabSep = vocabHtml ? `<hr class="sp-sep" />${vocabHtml}` : "";
 
     sections.push(`<section class="card" id="${id}">
 <header class="card-h"><h2>第 ${n} 课</h2></header>
 <table class="meta" aria-label="第 ${n} 课元数据">${metaRows}</table>
 ${patternSep}
+${vocabSep}
 <h3 class="body-h">课文正文</h3>
 <pre class="body" lang="en">${body}</pre>
 </section>`);
@@ -142,12 +151,30 @@ ${patternSep}
   .sp-export .sp-meta, .sp-export .sp-note { font-size: 0.8rem; color: #4b5563; }
   .sp-export ol { margin: 0.2rem 0 0.4rem 1.1rem; padding: 0; }
   .sp-sep { border: none; border-top: 1px dashed #dee2e6; margin: 0.75rem 0; }
+  .vf-export h3 { font-size: 1rem; margin: 0.5rem 0 0.35rem; }
+  .vf-sub { font-size: 0.82rem; font-weight: 500; color: #5a6b75; }
+  .vf-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.25rem 0 0.5rem; }
+  .vf-table th, .vf-table td { border: 1px solid var(--bd); padding: 0.35rem 0.5rem; vertical-align: top; }
+  .vf-table th[scope="row"] { width: 2rem; text-align: center; color: #5a6b75; }
+  .vf-table th[scope="col"] { text-align: left; background: #f1f3f5; }
+  .vf-td-cefr { text-align: center; white-space: nowrap; width: 5.5rem; vertical-align: middle; }
+  .vf-td-cam { text-align: center; white-space: nowrap; width: 6.5rem; vertical-align: middle; }
+  .vf-cefr { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 0.3rem; font-size: 0.85rem; font-weight: 600; }
+  .vf-cefr-a1 { background: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9; }
+  .vf-cefr-a2 { background: #f3e5f5; color: #4a148c; border: 1px solid #ce93d8; }
+  .vf-cefr-b1 { background: #e0f2f1; color: #004d40; border: 1px solid #26a69a; }
+  .vf-cefr-na { background: #eceff1; color: #455a64; border: 1px solid #b0bec5; font-weight: 500; }
+  .vf-cam { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 0.3rem; font-size: 0.82rem; font-weight: 600; }
+  .vf-cam-movers { background: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9; }
+  .vf-cam-ket { background: #ede7f6; color: #4527a0; border: 1px solid #b39ddb; }
+  .vf-cam-pet { background: #e8f5e9; color: #1b5e20; border: 1px solid #81c784; }
+  .vf-cam-na { background: #eceff1; color: #455a64; border: 1px solid #b0bec5; font-weight: 500; }
   @media print { body { background: #fff; } .card { border-color: #ccc; } }
 </style>
 </head>
 <body>
 <h1>${escapeHtml(title)}</h1>
-<p class="intro">本页由分级阅读平台在本机生成，含所选课次的元数据、在页内已做的「句型与例句」分析（若有）与课文正文。可用浏览器「打印」另存为 PDF。课文与 <code>ZIP</code> 中的单课 <code>.txt</code> 为同一套内容；若为 JSON 绘本数据，已展开为可读的按页纯文本。</p>
+<p class="intro">本页由分级阅读平台在本机生成，含所选课次的元数据、在页内已做的「句型与例句」分析（若有）、「本课定表词」表（若有，含<strong> CEFR 欧框</strong> 与 <strong>剑桥级别</strong> 列；Level 1、2 每课至多 6 条，Level 3、4 每课至多 4 条）与课文正文。可用浏览器「打印」另存为 PDF。课文与 <code>ZIP</code> 内单课 <code>.txt</code> 中定表段、欧框/剑桥标记为同一套规则；若为 JSON 绘本数据，已展开为可读的按页纯文本。</p>
 ${sections.join("\n")}
 </body>
 </html>

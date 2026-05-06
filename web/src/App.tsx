@@ -1,8 +1,16 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   analyzeSentencePattern,
   fetchLessonPlan,
   fetchLevels,
+  fetchVocabCandidates,
   generateDraft,
   generateProofread,
   generateRefine,
@@ -11,17 +19,54 @@ import {
   type LevelItem,
   type LessonPlan,
   type SentencePatternResponse,
+  type VocabCandidateItem,
 } from "./api/client";
 import { DEFAULT_STRUCTURE, STRUCTURE_TYPES } from "./structureOptions";
+import {
+  DEFAULT_STRUCTURE_LEVEL2,
+  STRUCTURE_TYPES_LEVEL2,
+} from "./structureOptionsLevel2";
+import {
+  DEFAULT_STRUCTURE_LEVEL1,
+  STRUCTURE_TYPES_LEVEL1,
+} from "./structureOptionsLevel1";
 import { DEFAULT_TENSE_FOCUS, TENSE_FOCUS_OPTIONS } from "./tenseOptions";
 import { DEFAULT_GENRE_FOCUS, GENRE_FOCUS_OPTIONS } from "./genreOptions";
-import { getLevel3Phase, getLevel3WordCountBounds } from "./level3Phase";
 import {
+  GENRE_FOCUS_OPTIONS_LEVEL4,
+  DEFAULT_GENRE_FOCUS_LEVEL4,
+} from "./genreOptionsLevel4";
+import {
+  TENSE_FOCUS_OPTIONS_LEVEL4,
+  DEFAULT_TENSE_FOCUS_LEVEL4,
+} from "./tenseOptionsLevel4";
+import {
+  findLessonPlanRow,
+  getLevel1Band,
+  getLevel1WordCountBounds,
+  getLevel2Band,
+  getLevel2WordCountBounds,
+  getPagedBookBand,
+  getPagedBookWordCountBounds,
+  getVocabFinalMaxRows,
+  isBookPipelineLevel,
+  levelHasLessonPlan,
+  isPagedBookLevel,
+  type PagedBookLevelId,
+} from "./bookPhase";
+import {
+  collectFinalVocabHeadwordsFromOtherLessons,
   getLesson,
   isUsableSentencePatternSnapshot,
+  pagedBookDraftRefinedPatch,
+  pagedBookDraftOnlyPatch,
+  pagedBookRefinedOnlyPatch,
+  pagedBookRefinedSnapshotPatch,
+  readPagedBookStages,
   resolveLessonTextForExport,
   saveLesson,
   type SentencePatternSnapshot,
+  type VocabFinalRow,
 } from "./lessonLibrary";
 import { LessonDownloadPanel } from "./LessonDownloadPanel";
 import { LessonPanel } from "./LessonPanel";
@@ -29,11 +74,26 @@ import { PromptEditorPanel } from "./PromptEditorPanel";
 import { BookDraftEditor } from "./BookDraftEditor";
 import { ReadingOutput } from "./ReadingOutput";
 import { SentencePatternBlock } from "./SentencePatternBlock";
+import { VocabCandidateBlock } from "./VocabCandidateBlock";
+import { VocabFinalTableBlock } from "./VocabFinalTableBlock";
+import { BookIllustrationPrepPanel } from "./BookIllustrationPrepPanel";
+import { BookIllustrationGeneratePanel } from "./BookIllustrationGeneratePanel";
+import type { IllustrationPageDirection } from "./bookIllustration";
 import {
   bookToPlainText,
   countWordsInModelOutput,
   tryParseBookOutput,
 } from "./parseBookOutput";
+import { filterVocabCandidatesByExcludedHeadwords } from "./vocabCandidateLocalFilter";
+import {
+  collectReadingTtsSegments,
+  collectVocabTtsWords,
+  prefetchTtsBatch,
+} from "./ttsAudioCache";
+import {
+  APP_VERSION_SHORT,
+  APP_VERSION_TAG,
+} from "./appVersion";
 
 export function App() {
   const [levels, setLevels] = useState<LevelItem[]>([]);
@@ -41,6 +101,8 @@ export function App() {
   const [level, setLevel] = useState("");
   const [topic, setTopic] = useState("");
   const [lessonTitle, setLessonTitle] = useState("");
+  /** Optional outline for generation (any language); persisted per lesson slot. */
+  const [contentBrief, setContentBrief] = useState("");
   const [wordCount, setWordCount] = useState(30);
   const [fictionOrNonfiction, setFictionOrNonfiction] = useState<
     "fiction" | "nonfiction"
@@ -77,6 +139,25 @@ export function App() {
   const [patternError, setPatternError] = useState<string | null>(null);
   /** Optional notes when re-running sentence-pattern (like 初稿修改说明). */
   const [patternNotes, setPatternNotes] = useState("");
+  /** Step-1 LLM vocabulary candidates (not persisted; step 2 = de-dup). */
+  const [vocabCandidates, setVocabCandidates] = useState<
+    VocabCandidateItem[] | null
+  >(null);
+  const [vocabLoading, setVocabLoading] = useState(false);
+  const [vocabError, setVocabError] = useState<string | null>(null);
+  const [vocabExcludedByMastery, setVocabExcludedByMastery] = useState<
+    VocabCandidateItem[] | null
+  >(null);
+  const [vocabPriorMasteryNote, setVocabPriorMasteryNote] = useState<
+    string | null
+  >(null);
+  const [vocabExcludedByOtherLessons, setVocabExcludedByOtherLessons] =
+    useState<VocabCandidateItem[] | null>(null);
+  const [vocabOtherLessonsNote, setVocabOtherLessonsNote] = useState<
+    string | null
+  >(null);
+  /** Step 3: up to 4 final words, persisted in lesson record. */
+  const [vocabFinal, setVocabFinal] = useState<VocabFinalRow[]>([]);
   const lessonRef = useRef(lessonNum);
   useEffect(() => {
     lessonRef.current = lessonNum;
@@ -84,7 +165,80 @@ export function App() {
 
   const lessonsPerLevel = levels.find((l) => l.id === level)?.lessonsPerLevel ?? 144;
   /** LocalStorage + UI slot (1..N); must match 当前第几课, not raw lessonNum when that exceeds N. */
-  const lessonSlot = Math.max(1, Math.min(lessonNum, lessonsPerLevel));
+  const lessonSlotRaw = Math.max(1, Math.min(lessonNum, lessonsPerLevel));
+  const lessonSlot = Number.isFinite(lessonSlotRaw)
+    ? Math.floor(lessonSlotRaw)
+    : 1;
+
+  /** In-memory per-page storyboard from Generate; Prep preview merges over saved lesson. */
+  const [illustrationPageDirsLive, setIllustrationPageDirsLive] = useState<
+    Record<number, IllustrationPageDirection>
+  >({});
+
+  useEffect(() => {
+    setIllustrationPageDirsLive({});
+  }, [level, lessonSlot]);
+
+  const onIllustrationPageDirectionsLive = useCallback(
+    (dirs: Record<number, IllustrationPageDirection>) => {
+      // Non-urgent: avoid blocking scroll/clicks while syncing prep preview from generate panel.
+      startTransition(() => {
+        setIllustrationPageDirsLive(dirs);
+      });
+    },
+    [],
+  );
+
+  // Prefetch reading lines after final text settles (debounced). lessonSlot in deps cancels a stale timer when switching lessons before `out` updates.
+  useEffect(() => {
+    const text = out?.trim();
+    if (!text) {
+      return;
+    }
+    if (
+      level !== "level1" &&
+      level !== "level2" &&
+      level !== "level3" &&
+      level !== "level4"
+    ) {
+      return;
+    }
+    const ac = new AbortController();
+    const timer = window.setTimeout(() => {
+      void prefetchTtsBatch(collectReadingTtsSegments(text), {
+        signal: ac.signal,
+      });
+    }, 700);
+    return () => {
+      ac.abort();
+      window.clearTimeout(timer);
+    };
+  }, [out, level, lessonSlot]);
+
+  useEffect(() => {
+    if (
+      level !== "level1" &&
+      level !== "level2" &&
+      level !== "level3" &&
+      level !== "level4"
+    ) {
+      return;
+    }
+    if (vocabFinal.length === 0) {
+      return;
+    }
+    const ac = new AbortController();
+    const timer = window.setTimeout(() => {
+      void prefetchTtsBatch(collectVocabTtsWords(vocabFinal), {
+        signal: ac.signal,
+        concurrency: 3,
+      });
+    }, 900);
+    return () => {
+      ac.abort();
+      window.clearTimeout(timer);
+    };
+  }, [vocabFinal, level, lessonSlot]);
 
   useEffect(() => {
     if (!level || !Number.isFinite(lessonsPerLevel) || lessonsPerLevel < 1) {
@@ -96,20 +250,51 @@ export function App() {
   }, [level, lessonNum, lessonsPerLevel]);
 
   const curriculumRow =
-    level === "level3" && lessonPlan
-      ? lessonPlan.lessons.find((r) => r.lesson === lessonSlot)
+    levelHasLessonPlan(level) && lessonPlan
+      ? findLessonPlanRow(lessonPlan.lessons, lessonSlot)
       : undefined;
   const curriculumTheme = curriculumRow?.theme;
   const curriculumLessonTitle = curriculumRow?.lessonTitle;
-  /** True when this slot has a title in level3.json (the 48 outline lessons). */
+  /** True when this slot has a title in the level lesson JSON. */
   const hasOutlineLessonTitle = Boolean(
-    level === "level3" && curriculumLessonTitle?.trim(),
+    levelHasLessonPlan(level) && curriculumLessonTitle?.trim(),
   );
 
-  const l3phase = level === "level3" ? getLevel3Phase(lessonSlot) : null;
-  const l3WordBounds = l3phase
-    ? getLevel3WordCountBounds(lessonSlot)
+  const l3phase = isPagedBookLevel(level)
+    ? getPagedBookBand(level, lessonSlot)
     : null;
+  const l3WordBounds = l3phase
+    ? getPagedBookWordCountBounds(level, lessonSlot)
+    : null;
+  const l1phase = level === "level1" ? getLevel1Band(lessonSlot) : null;
+  const l1WordBounds = l1phase
+    ? getLevel1WordCountBounds(l1phase.targetWords)
+    : null;
+  const l2phase = level === "level2" ? getLevel2Band(lessonSlot) : null;
+  const l2WordBounds = l2phase
+    ? getLevel2WordCountBounds(lessonSlot)
+    : null;
+
+  const genreOptions =
+    level === "level4" ? GENRE_FOCUS_OPTIONS_LEVEL4 : GENRE_FOCUS_OPTIONS;
+  const tenseOptions =
+    level === "level4" ? TENSE_FOCUS_OPTIONS_LEVEL4 : TENSE_FOCUS_OPTIONS;
+
+  useEffect(() => {
+    if (level === "level1") {
+      setStructureType((s) =>
+        STRUCTURE_TYPES_LEVEL1.some((o) => o.value === s)
+          ? s
+          : DEFAULT_STRUCTURE_LEVEL1,
+      );
+    } else if (level === "level2") {
+      setStructureType((s) =>
+        STRUCTURE_TYPES_LEVEL2.some((o) => o.value === s)
+          ? s
+          : DEFAULT_STRUCTURE_LEVEL2,
+      );
+    }
+  }, [level]);
 
   useEffect(() => {
     void fetchLevels()
@@ -125,14 +310,14 @@ export function App() {
       });
   }, []);
 
-  // Load per-level lesson curriculum (e.g. level3.json with 144 theme rows).
+  // Load per-level lesson curriculum (level1 / level3 / level4 JSON with 144 rows).
   useEffect(() => {
-    if (level !== "level3") {
+    if (!levelHasLessonPlan(level)) {
       setLessonPlan(null);
       return;
     }
     let cancelled = false;
-    void fetchLessonPlan("level3")
+    void fetchLessonPlan(level)
       .then((p) => {
         if (!cancelled) {
           setLessonPlan(p);
@@ -148,6 +333,33 @@ export function App() {
     };
   }, [level]);
 
+  // Keep genre/tense selects valid when switching between L3 and L4 option lists.
+  useEffect(() => {
+    if (level === "level4") {
+      setGenreFocus((g) =>
+        GENRE_FOCUS_OPTIONS_LEVEL4.some((o) => o.value === g)
+          ? g
+          : DEFAULT_GENRE_FOCUS_LEVEL4,
+      );
+      setTenseFocus((t) =>
+        TENSE_FOCUS_OPTIONS_LEVEL4.some((o) => o.value === t)
+          ? t
+          : DEFAULT_TENSE_FOCUS_LEVEL4,
+      );
+    } else if (level === "level3" || level === "level2") {
+      setGenreFocus((g) =>
+        GENRE_FOCUS_OPTIONS.some((o) => o.value === g)
+          ? g
+          : DEFAULT_GENRE_FOCUS,
+      );
+      setTenseFocus((t) =>
+        TENSE_FOCUS_OPTIONS.some((o) => o.value === t)
+          ? t
+          : DEFAULT_TENSE_FOCUS,
+      );
+    }
+  }, [level]);
+
   // Sync topic / lesson title / fiction mode from saved slot or curriculum outline.
   useEffect(() => {
     if (!level || !levels.length) {
@@ -155,14 +367,17 @@ export function App() {
     }
     const n = lessonSlot;
     const rec = getLesson(level, n);
-    if (level === "level3" && !lessonPlan?.lessons?.length) {
-      if (rec?.topic) {
-        setTopic(rec.topic);
+    setContentBrief(rec?.contentBrief ?? "");
+    if (levelHasLessonPlan(level) && !lessonPlan?.lessons?.length) {
+      const savedTopic = rec?.topic?.trim() ?? "";
+      if (savedTopic) {
+        setTopic(savedTopic);
       } else {
         setTopic("");
       }
-      if (rec?.lessonTitle) {
-        setLessonTitle(rec.lessonTitle);
+      const savedLt = rec?.lessonTitle?.trim() ?? "";
+      if (savedLt) {
+        setLessonTitle(savedLt);
       } else {
         setLessonTitle("");
       }
@@ -173,19 +388,23 @@ export function App() {
       }
       return;
     }
-    if (level === "level3" && lessonPlan?.lessons?.length) {
-      const row = lessonPlan.lessons.find((r) => r.lesson === n);
-      if (rec?.topic != null && rec.topic !== "") {
-        setTopic(rec.topic);
-      } else if (row?.theme) {
-        setTopic(row.theme);
+    if (levelHasLessonPlan(level) && lessonPlan?.lessons?.length) {
+      const row = findLessonPlanRow(lessonPlan.lessons, n);
+      const savedTopic = rec?.topic?.trim() ?? "";
+      const outlineTheme = row?.theme?.trim() ?? "";
+      if (savedTopic) {
+        setTopic(savedTopic);
+      } else if (outlineTheme) {
+        setTopic(outlineTheme);
       } else {
         setTopic("");
       }
-      if (rec?.lessonTitle != null && rec.lessonTitle !== "") {
-        setLessonTitle(rec.lessonTitle);
-      } else if (row?.lessonTitle) {
-        setLessonTitle(row.lessonTitle);
+      const savedLt = rec?.lessonTitle?.trim() ?? "";
+      const outlineLt = row?.lessonTitle?.trim() ?? "";
+      if (savedLt) {
+        setLessonTitle(savedLt);
+      } else if (outlineLt) {
+        setLessonTitle(outlineLt);
       } else {
         setLessonTitle("");
       }
@@ -207,13 +426,21 @@ export function App() {
     setLessonTitle("");
   }, [level, lessonSlot, lessonPlan, lessonsPerLevel, levels.length]);
 
-  // Word count: level3 follows lesson band (70/80/90); others use server defaultWordCount.
+  // Word count: L3/L4 follow lesson band; others use server defaultWordCount.
   useEffect(() => {
     if (!level || !levels.length) {
       return;
     }
-    if (level === "level3") {
-      setWordCount(getLevel3Phase(lessonSlot).targetWords);
+    if (isBookPipelineLevel(level)) {
+      if (level === "level1") {
+        setWordCount(getLevel1Band(lessonSlot).targetWords);
+      } else if (level === "level2") {
+        setWordCount(getLevel2Band(lessonSlot).targetWords);
+      } else {
+        setWordCount(
+          getPagedBookBand(level as PagedBookLevelId, lessonSlot).targetWords,
+        );
+      }
       return;
     }
     const cfg = levels.find((l) => l.id === level);
@@ -232,22 +459,30 @@ export function App() {
     const rec = getLesson(level, lessonSlot);
     setOut(rec?.text ?? null);
     setOutEditing(false);
-    if (level === "level3") {
-      setL3Draft(rec?.level3DraftText ?? "");
+    if (isBookPipelineLevel(level)) {
+      const { draft, refined } = readPagedBookStages(level, rec);
+      setL3Draft(draft);
       setL3DraftEditing(false);
-      const refined = rec?.level3RefinedText;
-      if (refined != null && refined !== "") {
-        setL3Refined(refined);
-      } else if (rec?.text) {
-        setL3Refined(rec.text);
-      } else {
-        setL3Refined("");
-      }
+      setL3Refined(refined);
       setL3RefinedEditing(false);
       setL3DraftNotes("");
     }
     setPatternError(null);
     setPatternNotes("");
+    setVocabCandidates(null);
+    setVocabError(null);
+    setVocabExcludedByMastery(null);
+    setVocabPriorMasteryNote(null);
+    setVocabExcludedByOtherLessons(null);
+    setVocabOtherLessonsNote(null);
+    const vrows = rec?.vocabFinalTable?.items;
+    setVocabFinal(
+      Array.isArray(vrows)
+        ? vrows
+            .filter((r) => r.word?.trim() && r.sentence?.trim())
+            .slice(0, getVocabFinalMaxRows(level))
+        : [],
+    );
   }, [level, lessonSlot, levels]);
 
   // Re-hydrate 句型 from localStorage after 分析保存 / 任意 save 引起的 libVersion 变化
@@ -266,7 +501,7 @@ export function App() {
   }, [libVersion, level, lessonSlot, levels.length]);
 
   useEffect(() => {
-    if (level !== "level3") {
+    if (!isBookPipelineLevel(level)) {
       setLevel3GenStats(null);
       setL3Draft("");
       setL3DraftEditing(false);
@@ -289,6 +524,7 @@ export function App() {
         level: string;
         topic?: string;
         lessonTitle?: string;
+        contentBrief?: string;
         wordCount?: number;
         lesson?: number;
         fictionOrNonfiction: "fiction" | "nonfiction";
@@ -299,8 +535,11 @@ export function App() {
       if (topic.trim()) {
         body.topic = topic.trim();
       }
-      if (level === "level3" && lessonTitle.trim()) {
+      if (isBookPipelineLevel(level) && lessonTitle.trim()) {
         body.lessonTitle = lessonTitle.trim();
+      }
+      if (contentBrief.trim()) {
+        body.contentBrief = contentBrief.trim();
       }
       if (genreFocus.trim()) {
         body.genreFocus = genreFocus.trim();
@@ -308,9 +547,15 @@ export function App() {
       if (tenseFocus.trim()) {
         body.tenseFocus = tenseFocus.trim();
       }
-      if (level === "level3") {
+      if (isBookPipelineLevel(level)) {
         body.lesson = slotLesson;
-        body.wordCount = getLevel3Phase(slotLesson).targetWords;
+        body.wordCount =
+          level === "level1"
+            ? getLevel1Band(slotLesson).targetWords
+            : level === "level2"
+              ? getLevel2Band(slotLesson).targetWords
+              : getPagedBookBand(level as PagedBookLevelId, slotLesson)
+                  .targetWords;
       } else if (wordCount > 0) {
         body.wordCount = wordCount;
       }
@@ -320,16 +565,19 @@ export function App() {
         text: res.text,
         wordCount: w,
         topic: topic.trim() || undefined,
-        lessonTitle:
-          level === "level3" ? lessonTitle.trim() || undefined : undefined,
+        lessonTitle: isBookPipelineLevel(level)
+          ? lessonTitle.trim() || undefined
+          : undefined,
+        contentBrief: contentBrief.trim() || undefined,
         fictionOrNonfiction,
         structureType,
         tenseFocus: tenseFocus.trim() || undefined,
         genreFocus: genreFocus.trim() || undefined,
-        ...(level === "level3"
-          ? { level3DraftText: res.text, level3RefinedText: res.text }
+        ...(isBookPipelineLevel(level)
+          ? pagedBookDraftRefinedPatch(level, res.text, res.text)
           : {}),
         sentencePatternSnapshot: null,
+        vocabFinalTable: null,
       });
       setLibVersion((v) => v + 1);
       if (slotLesson === lessonRef.current) {
@@ -337,11 +585,12 @@ export function App() {
         setOutEditing(false);
         setMeta({ cefr: res.cefr, level: res.level });
         setLevel3GenStats(res.level3WordCount ?? null);
-        if (level === "level3") {
+        if (isBookPipelineLevel(level)) {
           setL3Draft(res.text);
           setL3Refined(res.text);
         }
         setSentencePattern(null);
+        setVocabFinal([]);
       }
     } catch (err) {
       setGenError((err as Error).message);
@@ -351,7 +600,7 @@ export function App() {
   }
 
   async function runGenerateDraft() {
-    if (level !== "level3") {
+    if (!isBookPipelineLevel(level)) {
       return;
     }
     const slotLesson = lessonSlot;
@@ -375,8 +624,17 @@ export function App() {
       if (tenseFocus.trim()) {
         body.tenseFocus = tenseFocus.trim();
       }
+      if (contentBrief.trim()) {
+        body.contentBrief = contentBrief.trim();
+      }
       body.lesson = slotLesson;
-      body.wordCount = getLevel3Phase(slotLesson).targetWords;
+      body.wordCount =
+        level === "level1"
+          ? getLevel1Band(slotLesson).targetWords
+          : level === "level2"
+            ? getLevel2Band(slotLesson).targetWords
+            : getPagedBookBand(level as PagedBookLevelId, slotLesson)
+                .targetWords;
       const note = l3DraftNotes.trim();
       if (note) {
         body.draftExtraInstructions = note;
@@ -392,13 +650,14 @@ export function App() {
         wordCount: 0,
         topic: topic.trim() || undefined,
         lessonTitle: lessonTitle.trim() || undefined,
+        contentBrief: contentBrief.trim() || undefined,
         fictionOrNonfiction,
         structureType,
         tenseFocus: tenseFocus.trim() || undefined,
         genreFocus: genreFocus.trim() || undefined,
-        level3DraftText: draftText,
-        level3RefinedText: "",
+        ...pagedBookDraftRefinedPatch(level, draftText, ""),
         sentencePatternSnapshot: null,
+        vocabFinalTable: null,
       });
       setLibVersion((v) => v + 1);
       if (slotLesson === lessonRef.current) {
@@ -408,6 +667,7 @@ export function App() {
         setOut(null);
         setLevel3GenStats(null);
         setSentencePattern(null);
+        setVocabFinal([]);
       }
     } catch (err) {
       setGenError((err as Error).message);
@@ -417,7 +677,7 @@ export function App() {
   }
 
   async function runRefine() {
-    if (level !== "level3") {
+    if (!isBookPipelineLevel(level)) {
       return;
     }
     const rawDraft = (l3DraftEditing ? l3DraftBuffer : l3Draft).trim();
@@ -431,11 +691,16 @@ export function App() {
     setLoading(true);
     try {
       const res = await generateRefine({
+        level,
         lesson: slotLesson,
         draftText: rawDraft,
         topic: topic.trim() || undefined,
         lessonTitle: lessonTitle.trim() || undefined,
+        contentBrief: contentBrief.trim() || undefined,
         fictionOrNonfiction,
+        ...(level === "level1" || level === "level2"
+          ? { structureType: structureType.trim() || undefined }
+          : {}),
       });
       const w = countWordsInModelOutput(res.text);
       saveLesson(level, slotLesson, {
@@ -443,13 +708,14 @@ export function App() {
         wordCount: w,
         topic: topic.trim() || undefined,
         lessonTitle: lessonTitle.trim() || undefined,
+        contentBrief: contentBrief.trim() || undefined,
         fictionOrNonfiction,
         structureType,
         tenseFocus: tenseFocus.trim() || undefined,
         genreFocus: genreFocus.trim() || undefined,
-        level3DraftText: rawDraft,
-        level3RefinedText: res.text,
+        ...pagedBookDraftRefinedPatch(level, rawDraft, res.text),
         sentencePatternSnapshot: null,
+        vocabFinalTable: null,
       });
       setLibVersion((v) => v + 1);
       if (slotLesson === lessonRef.current) {
@@ -462,6 +728,7 @@ export function App() {
         setMeta({ cefr: res.cefr, level: res.level });
         setLevel3GenStats(res.level3WordCount ?? null);
         setSentencePattern(null);
+        setVocabFinal([]);
       }
     } catch (err) {
       setGenError((err as Error).message);
@@ -471,7 +738,7 @@ export function App() {
   }
 
   async function runProofread() {
-    if (level !== "level3") {
+    if (!isBookPipelineLevel(level)) {
       return;
     }
     const bookText = (l3RefinedEditing ? l3RefinedBuffer : l3Refined).trim();
@@ -485,10 +752,12 @@ export function App() {
     setLoading(true);
     try {
       const res = await generateProofread({
+        level,
         bookText,
         lesson: slotLesson,
         topic: topic.trim() || undefined,
         lessonTitle: lessonTitle.trim() || undefined,
+        contentBrief: contentBrief.trim() || undefined,
       });
       const w = countWordsInModelOutput(res.text);
       saveLesson(level, slotLesson, {
@@ -496,12 +765,14 @@ export function App() {
         wordCount: w,
         topic: topic.trim() || undefined,
         lessonTitle: lessonTitle.trim() || undefined,
+        contentBrief: contentBrief.trim() || undefined,
         fictionOrNonfiction,
         structureType,
         tenseFocus: tenseFocus.trim() || undefined,
         genreFocus: genreFocus.trim() || undefined,
-        level3RefinedText: bookText,
+        ...pagedBookRefinedSnapshotPatch(level, bookText),
         sentencePatternSnapshot: null,
+        vocabFinalTable: null,
       });
       setLibVersion((v) => v + 1);
       if (slotLesson === lessonRef.current) {
@@ -511,6 +782,7 @@ export function App() {
         setL3RefinedEditing(false);
         setMeta({ cefr: res.cefr, level: res.level });
         setSentencePattern(null);
+        setVocabFinal([]);
       }
     } catch (err) {
       setGenError((err as Error).message);
@@ -520,7 +792,12 @@ export function App() {
   }
 
   async function runSentencePattern() {
-    if (level !== "level1" && level !== "level2" && level !== "level3") {
+    if (
+      level !== "level1" &&
+      level !== "level2" &&
+      level !== "level3" &&
+      level !== "level4"
+    ) {
       return;
     }
     // Use lesson storage as fallback when `out` is stale/empty; level3 also falls back
@@ -564,8 +841,10 @@ export function App() {
         text: t,
         wordCount: w,
         topic: topic.trim() || undefined,
-        lessonTitle:
-          level === "level3" ? lessonTitle.trim() || undefined : undefined,
+        lessonTitle: isBookPipelineLevel(level)
+          ? lessonTitle.trim() || undefined
+          : undefined,
+        contentBrief: contentBrief.trim() || undefined,
         fictionOrNonfiction,
         structureType,
         tenseFocus: tenseFocus.trim() || undefined,
@@ -587,9 +866,107 @@ export function App() {
     }
   }
 
+  async function runVocabCandidates() {
+    if (
+      level !== "level1" &&
+      level !== "level2" &&
+      level !== "level3" &&
+      level !== "level4"
+    ) {
+      return;
+    }
+    const recSp = getLesson(level, lessonSlot);
+    const fromStore = recSp
+      ? resolveLessonTextForExport(level, recSp)
+      : null;
+    const oTrim = out?.trim() || "";
+    const sTrim = fromStore?.trim() || "";
+    const t = (oTrim.length >= sTrim.length ? oTrim : sTrim).trim() || oTrim || sTrim;
+    if (!t) {
+      setVocabError(
+        "定稿正文为空，无法筛选词汇。请确认本课有定稿内容后再点「筛选候选词」。",
+      );
+      return;
+    }
+    setVocabError(null);
+    setVocabLoading(true);
+    try {
+      const priorHeadwords = collectFinalVocabHeadwordsFromOtherLessons(
+        level,
+        lessonSlot,
+        lessonsPerLevel,
+      );
+      const r = await fetchVocabCandidates({
+        level,
+        text: t,
+        excludeHeadwords: priorHeadwords,
+      });
+      const { kept, removed } = filterVocabCandidatesByExcludedHeadwords(
+        r.candidates,
+        priorHeadwords,
+      );
+      setVocabCandidates(kept);
+      setVocabExcludedByMastery(r.excludedByPriorMastery ?? null);
+      setVocabPriorMasteryNote(r.priorMasteryFilterNote ?? null);
+      setVocabExcludedByOtherLessons(removed.length > 0 ? removed : null);
+      setVocabOtherLessonsNote(
+        removed.length > 0
+          ? `已剔除 ${removed.length} 个与本级别其他课已保存「定表词」重名的候选项；当前保留 ${kept.length} 个。`
+          : null,
+      );
+    } catch (e) {
+      setVocabError((e as Error).message);
+      setVocabCandidates(null);
+      setVocabExcludedByMastery(null);
+      setVocabPriorMasteryNote(null);
+      setVocabExcludedByOtherLessons(null);
+      setVocabOtherLessonsNote(null);
+    } finally {
+      setVocabLoading(false);
+    }
+  }
+
+  function persistVocabFinalTable(rows: VocabFinalRow[]) {
+    if (!level) {
+      return;
+    }
+    const rec = getLesson(level, lessonSlot);
+    if (!rec) {
+      return;
+    }
+    const t = (
+      out?.trim() ||
+      resolveLessonTextForExport(level, rec) ||
+      rec.text ||
+      ""
+    ).trim();
+    if (!t) {
+      return;
+    }
+    const w = countWordsInModelOutput(t);
+    const items = rows.slice(0, getVocabFinalMaxRows(level));
+    const ok = saveLesson(level, lessonSlot, {
+      text: t,
+      wordCount: w,
+      topic: topic.trim() || undefined,
+      lessonTitle: isBookPipelineLevel(level)
+        ? lessonTitle.trim() || undefined
+        : undefined,
+      contentBrief: contentBrief.trim() || undefined,
+      fictionOrNonfiction,
+      structureType,
+      tenseFocus: tenseFocus.trim() || undefined,
+      genreFocus: genreFocus.trim() || undefined,
+      vocabFinalTable: { items },
+    });
+    if (ok) {
+      setLibVersion((v) => v + 1);
+    }
+  }
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (level === "level3") {
+    if (isBookPipelineLevel(level)) {
       return;
     }
     void runGenerate();
@@ -643,18 +1020,22 @@ export function App() {
       text: t,
       wordCount: w,
       topic: topic.trim() || undefined,
-      lessonTitle:
-        level === "level3" ? lessonTitle.trim() || undefined : undefined,
+      lessonTitle: isBookPipelineLevel(level)
+        ? lessonTitle.trim() || undefined
+        : undefined,
+      contentBrief: contentBrief.trim() || undefined,
       fictionOrNonfiction,
       structureType,
       tenseFocus: tenseFocus.trim() || undefined,
       genreFocus: genreFocus.trim() || undefined,
       sentencePatternSnapshot: null,
+      vocabFinalTable: null,
     });
     setOut(t);
     setLibVersion((v) => v + 1);
     setOutEditing(false);
     setSentencePattern(null);
+    setVocabFinal([]);
   }
 
   function cancelOutEdit() {
@@ -703,11 +1084,12 @@ export function App() {
       wordCount: countWordsInModelOutput(out ?? ""),
       topic: topic.trim() || undefined,
       lessonTitle: lessonTitle.trim() || undefined,
+      contentBrief: contentBrief.trim() || undefined,
       fictionOrNonfiction,
       structureType,
       tenseFocus: tenseFocus.trim() || undefined,
       genreFocus: genreFocus.trim() || undefined,
-      level3DraftText: t,
+      ...pagedBookDraftOnlyPatch(level, t),
     });
     setLibVersion((v) => v + 1);
     setL3DraftEditing(false);
@@ -745,12 +1127,15 @@ export function App() {
       wordCount: w,
       topic: topic.trim() || undefined,
       lessonTitle: lessonTitle.trim() || undefined,
+      contentBrief: contentBrief.trim() || undefined,
       fictionOrNonfiction,
       structureType,
       tenseFocus: tenseFocus.trim() || undefined,
       genreFocus: genreFocus.trim() || undefined,
-      level3RefinedText: t,
-      ...(syncFinal ? { sentencePatternSnapshot: null as const } : {}),
+      ...pagedBookRefinedOnlyPatch(level, t),
+      ...(syncFinal
+        ? { sentencePatternSnapshot: null as const, vocabFinalTable: null as const }
+        : {}),
     });
     if (syncFinal) {
       setOut(t);
@@ -759,6 +1144,7 @@ export function App() {
     setL3RefinedEditing(false);
     if (syncFinal) {
       setSentencePattern(null);
+      setVocabFinal([]);
     }
   }
 
@@ -768,7 +1154,7 @@ export function App() {
   }
 
   function useDraftInsteadOfRefined() {
-    if (level !== "level3") {
+    if (!isBookPipelineLevel(level)) {
       return;
     }
     const draft = (l3DraftEditing ? l3DraftBuffer : l3Draft).trim();
@@ -790,13 +1176,15 @@ export function App() {
       wordCount: countWordsInModelOutput(nextFinal ?? ""),
       topic: topic.trim() || undefined,
       lessonTitle: lessonTitle.trim() || undefined,
+      contentBrief: contentBrief.trim() || undefined,
       fictionOrNonfiction,
       structureType,
       tenseFocus: tenseFocus.trim() || undefined,
       genreFocus: genreFocus.trim() || undefined,
-      level3DraftText: draft,
-      level3RefinedText: draft,
-      ...(syncFinal ? { sentencePatternSnapshot: null as const } : {}),
+      ...pagedBookDraftRefinedPatch(level, draft, draft),
+      ...(syncFinal
+        ? { sentencePatternSnapshot: null as const, vocabFinalTable: null as const }
+        : {}),
     });
     setL3Refined(draft);
     setL3RefinedEditing(false);
@@ -807,6 +1195,7 @@ export function App() {
     setLibVersion((v) => v + 1);
     if (syncFinal) {
       setSentencePattern(null);
+      setVocabFinal([]);
     }
   }
 
@@ -814,6 +1203,13 @@ export function App() {
     <div className="app">
       <header className="head">
         <h1>Graded reading</h1>
+        <p className="app-release-tagline" lang="zh-CN">
+          <span className="app-release-ver">v{APP_VERSION_SHORT}</span>
+          <span className="app-release-sep" aria-hidden>
+            {" · "}
+          </span>
+          <span className="app-release-label">{APP_VERSION_TAG}</span>
+        </p>
         <p>
           每个阅读级别有固定课文槽位（与课程一致，例如 1–144
           课），生成结果会保存到本机当前所选课次；在下方格子里可总览与切换已保存的课文。
@@ -851,16 +1247,16 @@ export function App() {
             lessonsPerLevel={lessonsPerLevel}
             version={libVersion}
             themeForLesson={(n) => {
-              if (level !== "level3" || !lessonPlan) {
+              if (!levelHasLessonPlan(level) || !lessonPlan) {
                 return undefined;
               }
-              return lessonPlan.lessons.find((r) => r.lesson === n)?.theme;
+              return findLessonPlanRow(lessonPlan.lessons, n)?.theme;
             }}
             planLessonTitleForLesson={(n) => {
-              if (level !== "level3" || !lessonPlan) {
+              if (!levelHasLessonPlan(level) || !lessonPlan) {
                 return undefined;
               }
-              return lessonPlan.lessons.find((r) => r.lesson === n)?.lessonTitle;
+              return findLessonPlanRow(lessonPlan.lessons, n)?.lessonTitle;
             }}
           />
         </Fragment>
@@ -886,7 +1282,7 @@ export function App() {
               }
               setLevel(v);
               setLessonNum(1);
-              if (v !== "level3") {
+              if (!isBookPipelineLevel(v)) {
                 setTopic("");
                 setLessonTitle("");
               }
@@ -906,7 +1302,7 @@ export function App() {
         <label className="row">
           <span>
             主题
-            {level === "level3" && lessonPlan
+            {levelHasLessonPlan(level) && lessonPlan
               ? "（课纲自动同步，可改）"
               : "（选填）"}
           </span>
@@ -914,7 +1310,7 @@ export function App() {
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder={
-              level === "level3" && lessonPlan
+              levelHasLessonPlan(level) && lessonPlan
                 ? "与当前课次课纲主题一致，可直接生成"
                 : "e.g. A day at the park with my friend"
             }
@@ -922,25 +1318,51 @@ export function App() {
           />
         </label>
 
-        {level === "level3" && (
+        {!isBookPipelineLevel(level) && (
+          <label className="row">
+            <span>文本内容构思（选填）</span>
+            <textarea
+              value={contentBrief}
+              onChange={(e) => setContentBrief(e.target.value)}
+              placeholder="用几句话说明本篇大致写什么、关键情节或知识点；可不填。填写后会一并传给生成模型作参考。"
+              rows={3}
+              autoComplete="off"
+              spellCheck={true}
+            />
+          </label>
+        )}
+
+        {isBookPipelineLevel(level) && (
           <label className="row">
             <span>课文标题 (Lesson title)</span>
             <input
               value={lessonTitle}
               onChange={(e) => setLessonTitle(e.target.value)}
               title={
-                !lessonPlan
-                  ? "课纲加载中，亦可手填"
-                  : hasOutlineLessonTitle
+                levelHasLessonPlan(level) && lessonPlan?.lessons?.length
+                  ? hasOutlineLessonTitle
                     ? "表内给定的课次已预填，可改"
-                    : "本课不在表内 48 条课纲中，可自填或留空"
+                    : level === "level1"
+                      ? "本课无课纲标题，可自填或留空"
+                      : level === "level2"
+                        ? "本课无课纲预填（中段或非课纲槽），可自填或留空"
+                        : "本课不在表内 48 条课纲中，可自填或留空"
+                  : level === "level1"
+                    ? "可选；可与输出 JSON 的 title 字段对应（课纲加载后将自动同步）"
+                    : "课纲加载中，亦可手填"
               }
               placeholder={
-                !lessonPlan
-                  ? "课纲加载中…"
-                  : hasOutlineLessonTitle
+                levelHasLessonPlan(level) && lessonPlan?.lessons?.length
+                  ? hasOutlineLessonTitle
                     ? "与课纲一致，可改"
-                    : "本课无课纲标题，可自填或留空"
+                    : level === "level1"
+                      ? "本课无课纲标题"
+                      : level === "level2"
+                        ? "本课无课纲标题（中段或非课纲槽）"
+                        : "本课无课纲标题，可自填或留空"
+                  : level === "level1"
+                    ? "可选书名 / lesson title"
+                    : "课纲加载中…"
               }
               autoComplete="off"
               spellCheck={false}
@@ -948,44 +1370,91 @@ export function App() {
           </label>
         )}
 
-        {level === "level3" && lessonPlan && (
+        {isBookPipelineLevel(level) && (
+          <label className="row">
+            <span>文本内容构思（选填）</span>
+            <textarea
+              value={contentBrief}
+              onChange={(e) => setContentBrief(e.target.value)}
+              placeholder="用几句话说明本篇大致写什么、关键情节或知识点；可不填。填写后会一并传给生成模型作参考。"
+              rows={3}
+              autoComplete="off"
+              spellCheck={true}
+            />
+          </label>
+        )}
+
+        {levelHasLessonPlan(level) && lessonPlan && (
           <p className="form-slot-hint" role="note">
-            第 <strong>1–16</strong>、<strong>49–64</strong>、<strong>97–112</strong>{" "}
-            课含表格中的主题与课文标题，已预填；其余课次不预填，需要时请自填。
+            {level === "level1" ? (
+              <>
+                一级：三段（<strong>1–48</strong> / <strong>49–96</strong> /{" "}
+                <strong>97–144</strong>
+                ）各含 <strong>24</strong>{" "}
+                个大主题；每主题占连续两课（两个短语书槽位），全级别{" "}
+                <strong>144</strong> 槽位对应 <strong>72</strong>{" "}
+                个「主题×阶段」书位；主题与课文标题已按课次预填。
+              </>
+            ) : level === "level2" ? (
+              <>
+                二级：<strong>第 1–34</strong> 课（第一段）与 <strong>第 97–130</strong>{" "}
+                课（第三段）含课纲主题与课文标题：<strong>17</strong> 个大主题各{" "}
+                <strong>1</strong> 本 fiction + <strong>1</strong> 本 nonfiction，两段合计{" "}
+                <strong>68</strong> 本书位；<strong>第 35–48</strong>、
+                <strong>49–96</strong>、<strong>131–144</strong>{" "}
+                课无课纲预填，体裁与主题请按需自填。
+              </>
+            ) : level === "level4" ? (
+              <>
+                第 <strong>1–8</strong>、<strong>49–56</strong>、
+                <strong>97–104</strong>{" "}
+                课含课纲中的主题与课文标题（每单元 fiction→nonfiction 两课）；其余课次不预填，需要时请自填。
+              </>
+            ) : (
+              <>
+                第 <strong>1–16</strong>、<strong>49–64</strong>、
+                <strong>97–112</strong>{" "}
+                课含表格中的主题与课文标题，已预填；其余课次不预填，需要时请自填。
+              </>
+            )}
           </p>
         )}
 
-        <label className="row">
-          <span>虚构 / 非虚构</span>
-          <select
-            value={fictionOrNonfiction}
-            onChange={(e) =>
-              setFictionOrNonfiction(
-                e.target.value === "nonfiction" ? "nonfiction" : "fiction",
-              )
-            }
-            disabled={!levels.length}
-          >
-            <option value="fiction">虚构 (fiction)</option>
-            <option value="nonfiction">非虚构 (nonfiction)</option>
-          </select>
-        </label>
+        {level !== "level1" && (
+          <>
+            <label className="row">
+              <span>虚构 / 非虚构</span>
+              <select
+                value={fictionOrNonfiction}
+                onChange={(e) =>
+                  setFictionOrNonfiction(
+                    e.target.value === "nonfiction" ? "nonfiction" : "fiction",
+                  )
+                }
+                disabled={!levels.length}
+              >
+                <option value="fiction">虚构 (fiction)</option>
+                <option value="nonfiction">非虚构 (nonfiction)</option>
+              </select>
+            </label>
 
-        <label className="row">
-          <span>体裁 / 具体形式（选填）</span>
-          <select
-            value={genreFocus}
-            onChange={(e) => setGenreFocus(e.target.value)}
-            disabled={!levels.length}
-            title="不选则只按上项虚构/非虚构；可选童话、寓言等，Level3 常用来试写"
-          >
-            {GENRE_FOCUS_OPTIONS.map((o) => (
-              <option key={o.value || "g-none"} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            <label className="row">
+              <span>体裁 / 具体形式（选填）</span>
+              <select
+                value={genreFocus}
+                onChange={(e) => setGenreFocus(e.target.value)}
+                disabled={!levels.length}
+                title="不选则只按上项虚构/非虚构；可选童话、寓言等，Level2/3 可选用"
+              >
+                {genreOptions.map((o) => (
+                  <option key={o.value || "g-none"} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
 
         <label className="row">
           <span>结构类型</span>
@@ -994,7 +1463,12 @@ export function App() {
             onChange={(e) => setStructureType(e.target.value)}
             disabled={!levels.length}
           >
-            {STRUCTURE_TYPES.map((o) => (
+            {(level === "level1"
+              ? STRUCTURE_TYPES_LEVEL1
+              : level === "level2"
+                ? STRUCTURE_TYPES_LEVEL2
+                : STRUCTURE_TYPES
+            ).map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -1002,40 +1476,97 @@ export function App() {
           </select>
         </label>
 
-        <label className="row">
-          <span>时态重点（选填）</span>
-          <select
-            value={tenseFocus}
-            onChange={(e) => setTenseFocus(e.target.value)}
-            disabled={!levels.length}
-            title="不选则不限定；若选，生成时会突出该时态/用法"
-          >
-            {TENSE_FOCUS_OPTIONS.map((o) => (
-              <option key={o.value || "none"} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {level !== "level1" && (
+          <label className="row">
+            <span>时态重点（选填）</span>
+            <select
+              value={tenseFocus}
+              onChange={(e) => setTenseFocus(e.target.value)}
+              disabled={!levels.length}
+              title="不选则不限定；若选，生成时会突出该时态/用法"
+            >
+              {tenseOptions.map((o) => (
+                <option key={o.value || "none"} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="row">
           <span>
-            {l3phase ? "本段目标词数（只读，随课次三档 70/80/90）" : "约词数"}
+            {l1phase
+              ? "本段目标词数（只读，随课次三档 12/18/24）"
+              : l2phase
+                ? "本段目标词数（只读，Level 2 三档短文）"
+                : l3phase
+                  ? level === "level4"
+                    ? "本段目标词数（只读，随课次三档 90/100/110）"
+                    : "本段目标词数（只读，随课次三档 70/80/90）"
+                  : "约词数"}
           </span>
           <input
             type="number"
             min={1}
             max={10000}
-            value={l3phase ? l3phase.targetWords : wordCount}
-            readOnly={l3phase != null}
+            value={
+              l1phase
+                ? l1phase.targetWords
+                : l2phase
+                  ? l2phase.targetWords
+                  : l3phase
+                    ? l3phase.targetWords
+                    : wordCount
+            }
+            readOnly={
+              l1phase != null || l2phase != null || l3phase != null
+            }
             title={
-              l3phase && l3WordBounds
-                ? `Level3：${l3phase.pageCountMin}–${l3phase.pageCountMax} 页 JSON 绘本。本段目标约 ${l3WordBounds.target} 词，词数带约 ${l3WordBounds.min}–${l3WordBounds.max} 词；三档为前 48 课 70、中 48 课 80、后 48 课 90。`
-                : undefined
+              l1phase && l1WordBounds
+                ? `Level 1：固定 6 页 JSON；全书总词目标约 ${l1WordBounds.target}（带 ${l1WordBounds.min}–${l1WordBounds.max}）；每页短语 ${l1phase.minPhraseWords}–${l1phase.maxPhraseWords} 词。`
+                : l2phase && l2WordBounds
+                  ? `Level 2：${l2phase.pageCountMin}–${l2phase.pageCountMax} 页 JSON；全书约 ${l2WordBounds.min}–${l2WordBounds.max} 词（目标约 ${l2WordBounds.target}）；单句约 ${l2phase.minWordsPerSentence}–${l2phase.maxWordsPerSentence} 词。`
+                  : l3phase && l3WordBounds
+                    ? level === "level4"
+                      ? `Level4：${l3phase.pageCountMin}–${l3phase.pageCountMax} 页 JSON 绘本。本段目标约 ${l3WordBounds.target} 词，词数带约 ${l3WordBounds.min}–${l3WordBounds.max} 词；三档为前 48 课 90、中 48 课 100、后 48 课 110。`
+                      : `Level3：${l3phase.pageCountMin}–${l3phase.pageCountMax} 页 JSON 绘本。本段目标约 ${l3WordBounds.target} 词，词数带约 ${l3WordBounds.min}–${l3WordBounds.max} 词；三档为前 48 课 70、中 48 课 80、后 48 课 90。`
+                    : undefined
             }
             onChange={(e) => setWordCount(Number(e.target.value) || 0)}
           />
         </label>
+        {l1phase && l1WordBounds && (
+          <p className="form-slot-hint" role="note">
+            Level 1 阶段课 <strong>{l1phase.phaseRange}</strong>：须输出 <strong>一个</strong>{" "}
+            JSON 绘本，固定 <strong>6 页</strong>；每页 <strong>一句</strong>短语{" "}
+            <strong>
+              {l1phase.minPhraseWords}–{l1phase.maxPhraseWords}
+            </strong>{" "}
+            个英文词；全书总词数目标约 <strong>{l1WordBounds.target}</strong>，后端按{" "}
+            <strong>
+              {l1WordBounds.min}–{l1WordBounds.max}
+            </strong>{" "}
+            控制。三档：第 1–48 课约 12 词、49–96 约 18 词、97–144 约 24 词。须选定结构类型（labeling /
+            pattern），无虚构/非虚构区分。
+          </p>
+        )}
+        {l2phase && l2WordBounds && (
+          <p className="form-slot-hint" role="note">
+            Level 2 阶段课 <strong>{l2phase.phaseRange}</strong>（CEFR A1，6–7
+            岁）：输出 <strong>一个</strong> JSON，<strong>
+              {l2phase.pageCountMin}–{l2phase.pageCountMax} 页
+            </strong>
+            ；全书英文词约{" "}
+            <strong>
+              {l2WordBounds.min}–{l2WordBounds.max}
+            </strong>{" "}
+            （目标约 <strong>{l2WordBounds.target}</strong>
+            ）；每句约 {l2phase.minWordsPerSentence}–{l2phase.maxWordsPerSentence}{" "}
+            词。须选结构类型（pattern / concept / question_answer /
+            action_sequence），并区分虚构/非虚构；参考段按课次与体裁自动切换（与教研参考表一致）。
+          </p>
+        )}
         {l3phase && l3WordBounds && (
           <p className="form-slot-hint" role="note">
             阶段课 <strong>{l3phase.phaseRange}</strong>：须输出 <strong>一个</strong>{" "}
@@ -1047,13 +1578,16 @@ export function App() {
             <strong>
               {l3WordBounds.min}–{l3WordBounds.max}
             </strong>{" "}
-            这一词数带控制，超出时常自动多轮压缩/补足。单句习惯约 {l3phase.minWordsPerSentence}–
-            {l3phase.maxWordsPerSentence} 词。三档总目标：第 1–48 课约 70 词、49–96 约 80 词、97–144 约
-            90 词。参考范文仅作语气与课堂用语参考，版式以本 JSON 为准。
+            这一词数带控制，超出时常自动多轮压缩/补足。单句习惯约             {l3phase.minWordsPerSentence}–
+            {l3phase.maxWordsPerSentence} 词。三档总目标：
+            {level === "level4"
+              ? "第 1–48 课约 90 词、49–96 约 100 词、97–144 约 110 词"
+              : "第 1–48 课约 70 词、49–96 约 80 词、97–144 约 90 词"}
+            。参考范文仅作语气与课堂用语参考，版式以本 JSON 为准。
           </p>
         )}
 
-        {level === "level3" ? (
+        {isBookPipelineLevel(level) ? (
           <>
             <p className="form-slot-hint" role="status">
               <strong>三阶段（推荐）：</strong>
@@ -1173,7 +1707,7 @@ export function App() {
           {genError}
         </p>
       )}
-      {level === "level3" && level3GenStats && (
+      {isBookPipelineLevel(level) && level3GenStats && (
         <p
           className={level3GenStats.inRange ? "form-slot-hint" : "err"}
           role="status"
@@ -1189,7 +1723,7 @@ export function App() {
         </p>
       )}
 
-      {level === "level3" && (
+      {isBookPipelineLevel(level) && (
         <section className="out l3-draft" aria-label="初稿">
           <div className="out-head">
             <h2>
@@ -1320,7 +1854,7 @@ export function App() {
         </section>
       )}
 
-      {level === "level3" && (
+      {isBookPipelineLevel(level) && (
         <section className="out l3-draft" aria-label="精修">
           <div className="out-head">
             <h2>
@@ -1467,21 +2001,43 @@ export function App() {
           <div className="out-head">
             <h2>
               第 {Math.min(lessonNum, lessonsPerLevel)} 课 ·
-              {level === "level3"
+              {isBookPipelineLevel(level)
                 ? " 第三阶段 · 定稿（语言校对后）"
                 : " 已保存的课文"}
             </h2>
             {out || outEditing ? (
               <p className="word-total" aria-label="英文总词数">
                 共 <strong>{countWordsInModelOutput(outForWordCount)}</strong> 词
-                {l3phase && l3WordBounds && !outEditing && level === "level3" && (
+                {l1phase &&
+                  l1WordBounds &&
+                  !outEditing &&
+                  level === "level1" && (
+                    <span className="word-total-sub">
+                      {" "}
+                      （本段目标带约 {l1WordBounds.min}–{l1WordBounds.max} 词，6 页 JSON）
+                    </span>
+                  )}
+                {l2phase &&
+                  l2WordBounds &&
+                  !outEditing &&
+                  level === "level2" && (
+                    <span className="word-total-sub">
+                      {" "}
+                      （本段目标带约 {l2WordBounds.min}–{l2WordBounds.max} 词，短绘本
+                      JSON）
+                    </span>
+                  )}
+                {l3phase &&
+                  l3WordBounds &&
+                  !outEditing &&
+                  isPagedBookLevel(level) && (
                   <span className="word-total-sub">
                     {" "}
                     （本段目标带约 {l3WordBounds.min}–{l3WordBounds.max} 词，6–8 页
                     JSON）
                   </span>
                 )}
-                {level === "level3" &&
+                {isBookPipelineLevel(level) &&
                   refinedMatchesOut &&
                   !outEditing &&
                   l3Refined.trim() && (
@@ -1494,13 +2050,15 @@ export function App() {
                 {outEditing && (
                   <span className="edit-badge">
                     {" "}
-                    {level === "level3" ? "定稿编辑中" : "编辑中"}
+                    {isBookPipelineLevel(level) ? "定稿编辑中" : "编辑中"}
                   </span>
                 )}
               </p>
             ) : (
               <p className="word-total empty-note">
-                {level === "level3" ? "本课还没有定稿" : "本课还没有保存的生成"}
+                {isBookPipelineLevel(level)
+                  ? "本课还没有定稿"
+                  : "本课还没有保存的生成"}
               </p>
             )}
             {(meta.cefr || meta.level) && (
@@ -1520,12 +2078,12 @@ export function App() {
                       ? "请先结束初稿在线编辑"
                       : l3RefinedEditing
                         ? "请先结束精修在线编辑"
-                        : "在本页调整定稿（Level3 为表单 + 增减页）"
+                        : "在本页调整定稿（Level3/4 为表单 + 增减页）"
                   }
                 >
-                  {level === "level3" ? "在线编辑定稿" : "在线编辑"}
+                  {isBookPipelineLevel(level) ? "在线编辑定稿" : "在线编辑"}
                 </button>
-                {level === "level3" ? (
+                {isBookPipelineLevel(level) ? (
                   <button
                     className="btn sec"
                     type="button"
@@ -1591,18 +2149,18 @@ export function App() {
           </div>
           {outEditing && out != null ? (
             <div
-              className={`text-block out-edit-wrap${level === "level3" ? " book-draft-wrap" : ""}`}
+              className={`text-block out-edit-wrap${isBookPipelineLevel(level) ? " book-draft-wrap" : ""}`}
             >
               <label
                 className="out-edit-label"
-                htmlFor={level === "level3" ? undefined : "out-edit-ta"}
+                htmlFor={isBookPipelineLevel(level) ? undefined : "out-edit-ta"}
                 id="out-editor-label"
               >
-                {level === "level3"
+                {isBookPipelineLevel(level)
                   ? `编辑定稿 / 终稿（确认后写回第 ${Math.min(lessonNum, lessonsPerLevel)} 课，为默认导出正文）`
                   : `编辑正文（确认保存后写回第 ${Math.min(lessonNum, lessonsPerLevel)} 课）`}
               </label>
-              {level === "level3" ? (
+              {isBookPipelineLevel(level) ? (
                 <BookDraftEditor
                   variant="final"
                   value={outDraft}
@@ -1633,7 +2191,7 @@ export function App() {
             </div>
           ) : (
             <p className="out-placeholder">
-              {level === "level3"
+              {isBookPipelineLevel(level)
                 ? "定稿在「② 精修」后先与精修相同；经「③ 语言校核」后为终稿。亦可「一次性生成（旧）」单步得到初稿+精修合一结果。"
                 : `在上方选课后填写表单，点击「保存到第 ${Math.min(lessonNum, lessonsPerLevel)} 课并生成」。已有内容的格子为绿色。`}
             </p>
@@ -1642,7 +2200,38 @@ export function App() {
       )}
 
       {level &&
-        (level === "level1" || level === "level2" || level === "level3") &&
+        isBookPipelineLevel(level) &&
+        out &&
+        !outEditing && (
+          <BookIllustrationPrepPanel
+            levelId={level}
+            lessonSlot={lessonSlot}
+            finalBookText={out}
+            libVersion={libVersion}
+            onSaved={() => setLibVersion((v) => v + 1)}
+            illustrationPageDirectionsLive={illustrationPageDirsLive}
+          />
+        )}
+
+      {level &&
+        isBookPipelineLevel(level) &&
+        out &&
+        !outEditing && (
+          <BookIllustrationGeneratePanel
+            levelId={level}
+            lessonSlot={lessonSlot}
+            finalBookText={out}
+            libVersion={libVersion}
+            onSaved={() => setLibVersion((v) => v + 1)}
+            onIllustrationPageDirectionsLive={onIllustrationPageDirectionsLive}
+          />
+        )}
+
+      {level &&
+        (level === "level1" ||
+          level === "level2" ||
+          level === "level3" ||
+          level === "level4") &&
         out &&
         !outEditing && (
           <SentencePatternBlock
@@ -1657,6 +2246,55 @@ export function App() {
               void runSentencePattern();
             }}
             disableAnalyze={patternLoading}
+          />
+        )}
+      {level &&
+        (level === "level1" ||
+          level === "level2" ||
+          level === "level3" ||
+          level === "level4") &&
+        out &&
+        !outEditing && (
+          <VocabCandidateBlock
+            levelName={levels.find((l) => l.id === level)?.name ?? level}
+            cefrLabel={
+              levels.find((l) => l.id === level)?.cefr ?? meta.cefr ?? ""
+            }
+            levelId={level}
+            isLevel3={isBookPipelineLevel(level)}
+            items={vocabCandidates}
+            error={vocabError}
+            loading={vocabLoading}
+            onRun={() => {
+              void runVocabCandidates();
+            }}
+            disableRun={vocabLoading}
+            excludedByPriorMastery={vocabExcludedByMastery}
+            priorMasteryFilterNote={vocabPriorMasteryNote}
+            excludedByOtherLessons={vocabExcludedByOtherLessons}
+            otherLessonsFilterNote={vocabOtherLessonsNote}
+          />
+        )}
+      {level &&
+        (level === "level1" ||
+          level === "level2" ||
+          level === "level3" ||
+          level === "level4") &&
+        out &&
+        !outEditing && (
+          <VocabFinalTableBlock
+            pool={vocabCandidates}
+            value={vocabFinal}
+            onChange={(rows) => {
+              setVocabFinal(rows);
+              persistVocabFinalTable(rows);
+            }}
+            disabled={loading || vocabLoading}
+            enableMasteryWordlistCheck={isBookPipelineLevel(level)}
+            masteryScope={level === "level4" ? "l0-l3" : "l0-l2"}
+            isLevel3={isBookPipelineLevel(level)}
+            maxRows={getVocabFinalMaxRows(level)}
+            levelId={level}
           />
         )}
     </div>

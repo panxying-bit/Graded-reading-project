@@ -1,5 +1,6 @@
 # Local secrets
 .env
+server/.env
 .env.local
 .env.*.local
 .env.rtf

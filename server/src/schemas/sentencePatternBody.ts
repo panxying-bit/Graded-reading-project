@@ -4,7 +4,7 @@ import { z } from "zod";
  * Request: final passage (plain or level3 book JSON) + level for CEFR from config.
  */
 export const sentencePatternBodySchema = z.object({
-  level: z.enum(["level1", "level2", "level3"]),
+  level: z.enum(["level1", "level2", "level3", "level4"]),
   /** Full stored output: plain text (L1/L2) or book JSON (L3). */
   text: z.string().min(1).max(500_000),
   /** Optional; teacher says what was wrong with the last pick and how to re-choose. */

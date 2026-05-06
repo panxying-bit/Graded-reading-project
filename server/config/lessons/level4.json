@@ -1,0 +1,871 @@
+{
+  "level": "level4",
+  "description": "Level 4 (CEFR A2, ages 9–11): 12 curriculum units × 2 lessons (fiction then nonfiction). Early: lessons 1–8 (lesson 1 reserved / user workflow); mid: 49–56; late: 97–104. Other slots have empty theme/title until you edit in the UI.",
+  "themeCycle": [],
+  "lessons": [
+    {
+      "lesson": 1,
+      "theme": "Time",
+      "lessonTitle": "The Time-Traveling Cat",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 2,
+      "theme": "Landforms and bodies of water",
+      "lessonTitle": "Bodies of Water: Oceans, Rivers, and Lakes",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 3,
+      "theme": "Animals in land and water habitats",
+      "lessonTitle": "Animals in Different Habitats (Land)",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 4,
+      "theme": "Animals in land and water habitats",
+      "lessonTitle": "Water Animals",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 5,
+      "theme": "China",
+      "lessonTitle": "China: Country, Landmarks, and History",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 6,
+      "theme": "China",
+      "lessonTitle": "Chinese Festivals, Culture, and Arts",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 7,
+      "theme": "Travel and places",
+      "lessonTitle": "Travel and Transportation",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 8,
+      "theme": "Travel and places",
+      "lessonTitle": "Travel Destinations and Road Trips",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 9,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 10,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 11,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 12,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 13,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 14,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 15,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 16,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 17,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 18,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 19,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 20,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 21,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 22,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 23,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 24,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 25,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 26,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 27,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 28,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 29,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 30,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 31,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 32,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 33,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 34,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 35,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 36,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 37,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 38,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 39,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 40,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 41,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 42,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 43,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 44,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 45,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 46,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 47,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 48,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 49,
+      "theme": "Hobbies",
+      "lessonTitle": "Hobbies",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 50,
+      "theme": "Hobbies",
+      "lessonTitle": "Outdoor Hobbies and Sports",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 51,
+      "theme": "Cities and neighborhoods",
+      "lessonTitle": "Cities and Transportation",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 52,
+      "theme": "Cities and neighborhoods",
+      "lessonTitle": "Neighborhood Places",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 53,
+      "theme": "Jobs, needs, and goods",
+      "lessonTitle": "Jobs and Tools",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 54,
+      "theme": "Jobs, needs, and goods",
+      "lessonTitle": "Needs, Wants, Goods, and Services",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 55,
+      "theme": "People and homes",
+      "lessonTitle": "People and Their Homes",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 56,
+      "theme": "People and homes",
+      "lessonTitle": "Animals and Their Homes",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 57,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 58,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 59,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 60,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 61,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 62,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 63,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 64,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 65,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 66,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 67,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 68,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 69,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 70,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 71,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 72,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 73,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 74,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 75,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 76,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 77,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 78,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 79,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 80,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 81,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 82,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 83,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 84,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 85,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 86,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 87,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 88,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 89,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 90,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 91,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 92,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 93,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 94,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 95,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 96,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 97,
+      "theme": "Animals that help us",
+      "lessonTitle": "Animals That Help Us",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 98,
+      "theme": "Animals that help us",
+      "lessonTitle": "Wild Animals That Help Us",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 99,
+      "theme": "Technology",
+      "lessonTitle": "Inventions and Technology",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 100,
+      "theme": "Technology",
+      "lessonTitle": "Modern Technology and Digital Devices",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 101,
+      "theme": "Traditional stories",
+      "lessonTitle": "Fairy Tales",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 102,
+      "theme": "Traditional stories",
+      "lessonTitle": "Fables and Folk Tales",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 103,
+      "theme": "India and Japan",
+      "lessonTitle": "India",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 104,
+      "theme": "India and Japan",
+      "lessonTitle": "Japan",
+      "suggestedFictionOrNonfiction": "nonfiction"
+    },
+    {
+      "lesson": 105,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 106,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 107,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 108,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 109,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 110,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 111,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 112,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 113,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 114,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 115,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 116,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 117,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 118,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 119,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 120,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 121,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 122,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 123,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 124,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 125,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 126,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 127,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 128,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 129,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 130,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 131,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 132,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 133,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 134,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 135,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 136,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 137,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 138,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 139,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 140,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 141,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 142,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 143,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    },
+    {
+      "lesson": 144,
+      "theme": "",
+      "lessonTitle": "",
+      "suggestedFictionOrNonfiction": "fiction"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { tryParseBookOutput, type BookOutput } from "./parseBookOutput";
+import { splitPlaybackSentences } from "./splitPlaybackSentences";
+import { TtsPlayButton } from "./TtsPlayButton";
 
 type Props = {
   text: string;
@@ -77,9 +79,16 @@ function BookView({
               {pg.page}
             </span>
             <div className="book-page-body">
-              <p className="book-page-text">
-                {textWithOptionalHighlight(pg.text, highlightPhrase)}
-              </p>
+              <div className="book-page-text">
+                {splitPlaybackSentences(pg.text).map((sent, si) => (
+                  <div key={si} className="book-sentence-row">
+                    <span className="book-sentence-text" lang="en">
+                      {textWithOptionalHighlight(sent, highlightPhrase)}
+                    </span>
+                    <TtsPlayButton text={sent} />
+                  </div>
+                ))}
+              </div>
               {pg.scene_note?.trim() ? (
                 <p className="book-scene">{pg.scene_note.trim()}</p>
               ) : null}
@@ -98,7 +107,14 @@ export function ReadingOutput({ text, highlightPhrase }: Props) {
   }
   return (
     <div className="plain-reading" lang="en">
-      {textWithOptionalHighlight(text, highlightPhrase)}
+      {splitPlaybackSentences(text).map((sent, i) => (
+        <div key={i} className="book-sentence-row">
+          <span className="book-sentence-text">
+            {textWithOptionalHighlight(sent, highlightPhrase)}
+          </span>
+          <TtsPlayButton text={sent} />
+        </div>
+      ))}
     </div>
   );
 }

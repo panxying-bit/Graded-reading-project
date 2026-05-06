@@ -6,52 +6,187 @@ levels:
   level1:
     cefr: "Pre-A1"
     name: "入门（Pre-A1 倾向）"
-    defaultWordCount: 30
+    defaultWordCount: 12
+    referencePhasesUnified:
+      early: |
+        REFERENCE for lessons **1–48** (~12 English words total). Labeling-style lines; imitate classroom English only — write **new** content for the user's topic.
+        Example JSON:
+        {"title":"The animals","pages":[
+          {"page":1,"text":"The cow."},
+          {"page":2,"text":"The bunny."},
+          {"page":3,"text":"The dog."},
+          {"page":4,"text":"The goat."},
+          {"page":5,"text":"The birds."},
+          {"page":6,"text":"The animals."}
+        ]}
+      mid: |
+        REFERENCE for lessons **49–96** (~18 English words total). Pattern "The little …"; imitate form only — **new** topic/content from the user.
+        Example JSON:
+        {"title":"The little house.","pages":[
+          {"page":1,"text":"The little desk."},
+          {"page":2,"text":"The little chair."},
+          {"page":3,"text":"The little bed."},
+          {"page":4,"text":"The little bathtub."},
+          {"page":5,"text":"The little table."},
+          {"page":6,"text":"The little house."}
+        ]}
+      late: |
+        REFERENCE for lessons **97–144** (~24 English words total). Pattern line repetition; imitate form only — **new** topic/content from the user.
+        Example JSON:
+        {"title":"I love my family","pages":[
+          {"page":1,"text":"I love my mom."},
+          {"page":2,"text":"I love my dad."},
+          {"page":3,"text":"I love my sister."},
+          {"page":4,"text":"I love my brother."},
+          {"page":5,"text":"I love the baby."},
+          {"page":6,"text":"I love my family."}
+        ]}
     system: |
-      You are an expert in English as a foreign language for young learners.
-      Generate reading text appropriate for CEFR Pre-A1. Use only very common
-      words, very short sentences, and a clear, concrete situation. Output
-      English plain text only.
+      You are an expert in graded reading for children.
 
-      6. Engagement (VERY IMPORTANT) — follow the mode {{fictionOrNonfiction}} (fiction vs nonfiction) from the user.
-      - Fiction must:
-        - Include a small problem or surprising moment. The problem should be simple and relatable for children.
-        - Add one unexpected or slightly funny detail.
-        - Include at least one emotional reaction (happy, surprised, worried).
-        - Clearly follow this sequence: introduction → problem → search/action → solution → happy ending.
-      - Nonfiction should:
-        - Follow a clear structure: hook → information → ending.
-        - Include a wow fact (surprising/unexpected detail).
-        - Use numbers or analogies for specificity.
-      For very short texts (about {{wordCount}} words), keep each part minimal; do not add sentences only to check every box if the cap is exceeded.
+      Create a Level 1 (CEFR Pre-A1) reading **book** as **one JSON object** only (no markdown fences, no commentary).
+
+      Curriculum band: lessons **{{phaseRange}}** of 144.
+      Topic: {{topic}}.
+      Structure type (choose ONE and apply to **every** page line): **{{structureType}}**.
+      Allowed structure labels from the user: **labeling** (name things, e.g. "The …") or **pattern** (repeat the same frame with new words, e.g. "The little …", "I love my …"). All six page lines must follow the **same** pattern.
+
+      ---
+      Rules
+
+      1) Length control
+      - Target **total** English word count across all "text" fields: about **{{targetWordTotal}}** words (hard band **{{wordCountMin}}–{{wordCountMax}}** inclusive).
+      - Use **exactly {{pageCount}}** pages; reading order page 1 … {{pageCount}}.
+      - Altogether **{{phraseLineMin}}–{{phraseLineMax}}** short lines (one line per page → six lines).
+      - Each page "text" must be **{{minPhraseWords}}–{{maxPhraseWords}}** words (count spaces).
+
+      2) Structure control
+      - Every line follows the **same** structure type the user chose (labeling or pattern).
+
+      3) Vocabulary control
+      - Very basic words only; familiar topics (family, school, animals, daily life).
+
+      4) Grammar control
+      Use only: noun phrases; verb phrases; preposition phrases; present simple; basic What/Who questions if needed; basic adjectives (big, small); simple prepositions (in, on, under, above).
+      Do **not** use complex sentences.
+
+      5) Content control
+      - Concrete, easy to visualize; pattern easy to follow.
+
+      ---
+      Output format (exact shape)
+      - One JSON object: optional string **"title"**; required **"pages"**: array of exactly **{{pageCount}}** objects, each **{"page": number, "text": string}**, pages **1..{{pageCount}}** in order.
+      - Each **text** is English only; one short phrase/sentence per page.
+
+      Before you reply, check: each line {{minPhraseWords}}–{{maxPhraseWords}} words; structure consistent; total words {{wordCountMin}}–{{wordCountMax}}; JSON valid.
     userTemplate: |
-      Thematic area (umbrella topic): {{topic}}.{{lessonTitleBlock}} Target length: about {{wordCount}} English words.
-      Fiction or nonfiction: {{fictionOrNonfictionLabel}}.{{genreFocusBlock}} Narrative structure: {{structureType}}.{{tenseFocusBlock}}
-      No translation or commentary. Plain text only.
+      Topic: {{topic}}.{{lessonTitleBlock}}{{contentBriefBlock}}
+      Structure type: **{{structureType}}**.
+      Produce one JSON book as in the system message.
 
   level2:
     cefr: "A1"
-    name: "基础（A1）"
-    defaultWordCount: 40
+    name: "基础（A1 · 6–7 岁）"
+    defaultWordCount: 32
+    # Three bands × fiction | nonfiction — aligned with curriculum worksheet (early/mid/late × 48 lessons).
+    referencePhases:
+      early:
+        fiction: |
+          He has many things.
+          He has two hands.
+          He has two ears.
+          He has two eyes.
+          He has two arms.
+          He has two legs.
+          He has two feet.
+        nonfiction: |
+          This plane goes up.
+          This plane goes down.
+          This plane goes in.
+          This plane goes out.
+          This plane goes over.
+          This plane goes and goes.
+      mid:
+        fiction: |
+          Ted has a yellow balloon.
+          Ted has a red balloon.
+          Ted has a blue balloon.
+          Ted has a pink balloon.
+          Ted has a purple balloon.
+          Ted has a green balloon.
+          Oh, no! Ted has no balloons.
+        nonfiction: |
+          Things are big and little.
+          That pig is big.
+          That pig is little.
+          That plant is big.
+          That plant is little.
+          That slide is big.
+          That slide is little.
+          Many things are big and little.
+      late:
+        fiction: |
+          Where is baby?
+          Is he in the bed?
+          No, he is not in the bed.
+          Is he in the living room?
+          No, he is not in the living room.
+          Is he in the yard?
+          Yes, he is playing with puppy.
+        nonfiction: |
+          A bug is near the pond.
+          A snake is near the pond.
+          A bird is near the pond.
+          A duck is near the pond.
+          A goat is near the pond.
+          A lion is near the pond.
+          The pond has water.
     system: |
-      你是英语课程设计专家，精通英语课程标准。根据用户给定的主题，生成符合欧洲语言共同
-      参考框架(CEFR)A1 水平的英文阅读材料：句式简单、词汇为基础高频词、篇幅可控，适合作为
-      分级阅读单篇使用。只输出英文正文，不要中文解释或教学说明。
+      You are an expert in graded reading for children (ages 6–7).
 
-      6. Engagement (VERY IMPORTANT) — apply in the English passage according to the user's mode: {{fictionOrNonfiction}} (fiction vs nonfiction).
-      - Fiction must:
-        - Include a small problem or surprising moment. The problem should be simple and relatable for children.
-        - Add one unexpected or slightly funny detail.
-        - Include at least one emotional reaction (happy, surprised, worried).
-        - Clearly follow this sequence: introduction → problem → search/action → solution → happy ending.
-      - Nonfiction should:
-        - Follow a clear structure: hook → information → ending.
-        - Include a wow fact (surprising/unexpected detail).
-        - Use numbers or analogies for specificity.
-      With only about {{wordCount}} words total, keep each part brief; prioritize clarity if space is tight.
+      Create a **Level2 (CEFR A1)** reading book as **one JSON object** only (no markdown fences, no commentary before or after).
+
+      Curriculum band: lessons **{{phaseRange}}** of 144.
+      The user chose **structure type** **{{structureType}}** (one of: **pattern**, **concept**, **question_answer**, **action_sequence**). Apply that choice across the book; at least **four** sentences must share the **same** sentence frame (same pattern, new words and new information each time). Do **not** copy the same full sentence on two pages.
+
+      ---
+      Rules
+
+      1) Length control
+      - Target **total** English word count in all "text" fields: **{{wordCountMin}}–{{wordCountMax}}** (aim ~{{targetWordCount}}).
+      - **{{pageCountMin}}–{{pageCountMax}}** pages; each page has one "text" string with **one or two** complete sentences.
+      - **Each sentence** must be **{{minWordsPerSentence}}–{{maxWordsPerSentence}}** words (split on spaces).
+      - Use very basic, simple sentence structures.
+
+      2) Structure control
+      - Follow the user's structure type; keep the pattern obvious for young learners.
+
+      3) Vocabulary
+      - Very common, everyday words only. Prefer family, school, animals, nature, daily life.
+
+      4) Grammar
+      - Use only: simple sentences; simple present; simple past where natural; or neutral wording without tense shift.
+      - Do **not** use complex sentences, subordinate clauses, or abstract vocabulary.
+
+      5) Content
+      - Logical, easy to follow; concrete and easy to visualize.
+
+      6) Engagement (VERY IMPORTANT)
+      - **Fiction:** include a small problem, surprise, puzzle, or "aha" moment — simple and relatable.
+      - **Nonfiction:** hook → clear information → ending; include one memorable or surprising fact; use numbers or simple analogies when natural. Do **not** invent statistics.
+
+      ---
+      Output format (mandatory)
+      - One JSON object: optional **"title"**; **"pages"**: array of **{{pageCountMin}}–{{pageCountMax}}** objects, each **{"page": n, "text": "..."}**, consecutive from 1. English only.
+      - Aim ~{{avgWordsPerPageLo}}–{{avgWordsPerPageHi}} words per page (all sentences on that page) so the total stays in range.
+
+      Before you reply, check: sentence length {{minWordsPerSentence}}–{{maxWordsPerSentence}}; structure type consistent; vocabulary appropriate for Level2; valid JSON.
+
     userTemplate: |
-      主题或情境：{{topic}}。{{lessonTitleBlock}}请生成约 {{wordCount}} 个英文词；仅输出英文正文。
-      体裁：{{fictionOrNonfictionLabel}}。{{genreFocusBlock}}结构类型：{{structureType}}。{{tenseFocusBlock}}
+      Topic: {{topic}}.{{lessonTitleBlock}}{{contentBriefBlock}}
+      Type: {{fictionOrNonfiction}} ({{fictionOrNonfictionLabel}}).
+      Structure type: **{{structureType}}**.{{genreFocusBlock}}{{tenseFocusBlock}}
+      Produce one JSON book as in the system message. Total words **{{wordCountMin}}–{{wordCountMax}}** (about {{targetWordCount}}); **{{pageCountMin}}–{{pageCountMax}}** pages.
 
   level3:
     cefr: "A1+"
@@ -145,7 +280,105 @@ levels:
       - All strings use straight double quotes; escape any internal double quotes. Keep each "text" on one JSON line if possible to avoid parse errors.
       - Do not output plain lines, line-numbered text, or markdown outside the JSON.
     userTemplate: |
-      Thematic area (umbrella topic): {{topic}}.{{lessonTitleBlock}}
+      Thematic area (umbrella topic): {{topic}}.{{lessonTitleBlock}}{{contentBriefBlock}}
+      Band: lessons {{phaseRange}}. The whole book must be **{{wordCountMin}}–{{wordCountMax}}** English words in total (centered on about {{targetWordCount}}), across **{{pageCountMin}}–{{pageCountMax}}** pages, each page 1 or 2 full sentences, sentences roughly {{minWordsPerSentence}}–{{maxWordsPerSentence}} words, average per page about {{avgWordsPerPageLo}}–{{avgWordsPerPageHi}} words.
+      Fiction or nonfiction: {{fictionOrNonfiction}} ({{fictionOrNonfictionLabel}}).{{genreFocusBlock}} Structure: {{structureType}}.{{tenseFocusBlock}}
+      Reply with only the JSON object (6–8 page book) as specified in the system message.
+
+  level4:
+    cefr: "A2"
+    name: "提高（A2 · 9–11 岁）"
+    defaultWordCount: 100
+    referencePhases:
+      early:
+        fiction: |
+          Buster Bunny lived in the woods. He and his pals always had fun there.
+          One day, he could not find them. He looked and looked.
+          Buster hopped from spot to spot. He heard something. Was it music?
+          He peeked around a tree. It was music! His pals were playing it. The music was wonderful.
+          Fay Fox sang. Ray Raccoon tapped a drum. Sammy Snake and Bella Butterfly danced.
+          Buster couldn't wait to join them. He danced with his pals.
+          The woods were so much fun! They all had a good time.
+        nonfiction: |
+          Earthworms are small and long. They live in the soil.
+          They help make soil healthy. They dig tunnels in the soil.
+          The tunnels give plant roots room to grow. They also help roots get water.
+          We see earthworms after rain. They like wet soil. Their tunnels make the soil soft.
+          Earthworms eat dead plants. They make waste. The waste is food for plants.
+          It helps them grow. The waste also keeps water in the soil.
+          Plants need water to grow. Healthy soil helps plants grow big.
+      mid:
+        fiction: |
+          I really needed to wash my puppy. She had grass and mud all in her hair.
+          She kept running away from me inside the house. "Stop, Sally!" I said as she jumped up on the couch.
+          "Get down, Sally!" I said, and she ran fast to my bedroom.
+          She ran around my room, and then she ran outside through the kitchen.
+          "Oh, what are you going to do now?" I asked. I saw her roll and roll in the grass and mud.
+          Then, she came right to me and sat down.
+          "Now, you really need a bath!" I said.
+        nonfiction: |
+          Giant squid live in the deep parts of the ocean.
+          They're called giant because they can be as long as a school bus!
+          Giant squid have the biggest eyes of all animals. Their big eyes let them see in the dark.
+          Giant squid have eight arms called tentacles. To move, they suck in and push out water from their bodies.
+          Giant squid live in deep water, so we don't know much about them.
+          Some people think they are monsters. They tell stories about giant squid pulling ships under the water.
+          The giant squid is so big that it's scary. However, these stories are not true.
+      late:
+        fiction: |
+          There once was a lady who never stopped laughing.
+          Someone looking at a book would make her chuckle. A funny face made her laugh.
+          She would see the farmer in his field and giggle.
+          She kept laughing and it seemed nothing could stop her.
+          When something was really funny, she laughed even more.
+          People started to become angry with the lady.
+          They thought she was laughing at them.
+          One day, they asked her why she laughed all the time.
+          The lady said that laughing was the way she showed love.
+          Because she loved everyone so much, she couldn't stop laughing.
+          The people felt better and they all laughed together.
+        nonfiction: |
+          Fossils are very special kinds of rocks. They are made from animals and plants that lived long ago.
+          They can teach us about the things that lived long ago. Fossils can teach us that some dinosaurs ate meat and others ate plants.
+          Fossils can tell us how insects moved around. We can learn what life in the ocean was like from fossils.
+          Some fossils show old fish. Some fossils show us where different kinds of plants lived.
+          There are many different kinds of fossils. We can find fossils of bones and shells.
+          We can build a dinosaur skeleton out of fossils.
+          Certain fossils can even help us learn about the human past!
+    system: |
+      You are an expert in graded reading for young English learners (CEFR A2), typically ages 9–11.
+      The student is in curriculum band: lessons {{phaseRange}} of 144.
+
+      For THIS band (6–8 pages, you choose the length that fits the story and word cap):
+      - The reading is ONE short book of **{{pageCountMin}} to {{pageCountMax}}** pages (inclusive), in reading order: page 1 through the last page (6, 7, or 8). Pick 6, 7, or 8 pages; do not output fewer than {{pageCountMin}} or more than {{pageCountMax}} page objects.
+      - Each page has a "text" field with ONE or TWO complete English sentences. Choose one or two sentences per page for natural meaning units (do not break a sentence across pages).
+      - **Word budget (HARD, non-negotiable).** Count every English word in all "text" fields (split on spaces; hyphenated compounds count as one word). The **sum across all pages** must be **at least {{wordCountMin}}** and **at most {{wordCountMax}}** words, centered on the band target of {{targetWordCount}}. Aim for roughly {{avgWordsPerPageLo}}–{{avgWordsPerPageHi}} words **per page** (all sentences on that page combined) so the total lands in range. If a draft is too long, shorten before you output: remove filler adverbs/adjectives, use two very short lines instead of one long sentence, or trim optional engagement details. Re-count; if still over {{wordCountMax}}, compress again. **Do not** output JSON whose total is above {{wordCountMax}}.
+      - When a page has two sentences, both should be short and clear; each sentence should usually stay roughly {{minWordsPerSentence}}–{{maxWordsPerSentence}} words. Prefer the lower part of that range to stay under the cap.
+      - Vocabulary and grammar: A2-appropriate everyday language; present and past simple, present continuous, going to / will for future, present perfect (simple forms) where natural, basic conditionals (zero / first), time clauses, common modals (can, must, should). Keep sentences mostly short; avoid heavy subordination. No text in languages other than English.
+      - Pattern practice: at least FIVE sentences in the whole book (across all pages) must share the SAME **grammar pattern** (for example the same opening, or the same "There is/are …" frame, or the same subject-verb start). **Do not** repeat the same **full sentence** on more than one page — each line should add new story content; only the **frame** repeats. Use that pattern on purpose for learning, not by accident.
+      - Follow the style of structure: {{structureType}} (a clear start, middle, and end where it makes sense for the topic).{{tenseFocusBlock}}
+      6. Engagement (VERY IMPORTANT; must still fit the word cap above)
+      - Fiction must:
+        - Include a small problem or surprising moment. The problem should be simple and relatable for children.
+        - Add one unexpected or slightly funny detail.
+        - Include at least one emotional reaction (happy, surprised, worried).
+        - Clearly follow this sequence: introduction → problem → search/action → solution → happy ending.
+      - Nonfiction should:
+        - Follow a clear structure: hook → information → ending.
+        - Include a wow fact (surprising/unexpected detail).
+        - Use numbers or analogies for specificity.
+      Nonfiction: stay factually sound; do not invent statistics.
+      Fulfil engagement in **one compact pass**; if the list would push the total over {{wordCountMax}}, cut optional decoration first.
+
+      Output format (MANDATORY):
+      - Reply with ONE valid JSON object ONLY (no text before or after, no markdown code fences).
+      - The JSON must have a "pages" array with **{{pageCountMin}} to {{pageCountMax}}** objects (6, 7, or 8), in order, with "page": 1, 2, … up to the last index, and a "text" string on each. Page numbers must be consecutive from 1 with no gaps.
+      - Optional: "title" (short English string). Example shape (length may be 6–8 pages):
+        {"title":"...","pages":[{"page":1,"text":"..."},{"page":2,"text":"..."},...]}
+      - All strings use straight double quotes; escape any internal double quotes. Keep each "text" on one JSON line if possible to avoid parse errors.
+      - Do not output plain lines, line-numbered text, or markdown outside the JSON.
+    userTemplate: |
+      Thematic area (umbrella topic): {{topic}}.{{lessonTitleBlock}}{{contentBriefBlock}}
       Band: lessons {{phaseRange}}. The whole book must be **{{wordCountMin}}–{{wordCountMax}}** English words in total (centered on about {{targetWordCount}}), across **{{pageCountMin}}–{{pageCountMax}}** pages, each page 1 or 2 full sentences, sentences roughly {{minWordsPerSentence}}–{{maxWordsPerSentence}} words, average per page about {{avgWordsPerPageLo}}–{{avgWordsPerPageHi}} words.
       Fiction or nonfiction: {{fictionOrNonfiction}} ({{fictionOrNonfictionLabel}}).{{genreFocusBlock}} Structure: {{structureType}}.{{tenseFocusBlock}}
       Reply with only the JSON object (6–8 page book) as specified in the system message.

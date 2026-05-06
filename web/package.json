@@ -1,7 +1,8 @@
 {
   "name": "graded-reading-web",
-  "version": "1.1.1",
+  "version": "5.1.0",
   "private": true,
+  "description": "5.1 — 与根目录版本同步（绘本配图 / TTS / 词汇；Volc 诊断与后续拆页基线）",
   "type": "module",
   "scripts": {
     "dev": "vite",

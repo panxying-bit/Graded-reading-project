@@ -14,19 +14,19 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       /** If 5173 is taken, fail fast instead of switching to 5174 (localStorage is per origin). */
       strictPort: true,
-      // Long LLM calls can exceed default proxy idle limits; avoid ECONNRESET → "Failed to fetch"
+      // LLM + Volc Jimeng image poll can exceed 5 min; keep proxy >= server worst-case (~15 min).
       proxy: {
         "/api": {
           target,
           changeOrigin: true,
-          timeout: 300_000,
-          proxyTimeout: 300_000,
+          timeout: 900_000,
+          proxyTimeout: 900_000,
         },
         "/health": {
           target,
           changeOrigin: true,
-          timeout: 300_000,
-          proxyTimeout: 300_000,
+          timeout: 900_000,
+          proxyTimeout: 900_000,
         },
       },
     },

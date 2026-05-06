@@ -1,16 +1,20 @@
 {
   "name": "graded-reading-platform",
-  "version": "1.1.1",
+  "version": "5.1.0",
   "private": true,
+  "description": "5.1 — 5.0 生图基线 + Volc GetResult/50500 轮询与诊断、TTS/词汇/配图等（存档便于回退）",
   "scripts": {
     "llm:ping": "node server/scripts/llm-ping.mjs",
     "dev": "npm run dev:all",
+    "dev:stop": "bash scripts/stop-dev-stack.sh",
+    "dev:fresh": "npm run dev:stop && npm run dev:all",
     "dev:all": "concurrently -k -n server,web -c blue,magenta \"npm run server:dev\" \"npm run web:dev\"",
     "dev:server": "npm run server:dev",
     "web:dev": "npm --prefix web run dev",
     "server:dev": "npm --prefix server run dev",
     "server:dev:once": "npm --prefix server run dev:once",
-    "server:build": "npm --prefix server run build"
+    "server:build": "npm --prefix server run build",
+    "server:wordlist": "npm --prefix server run build:wordlist"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

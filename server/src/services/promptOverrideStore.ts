@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { LevelConfig, ReferencePhaseBand } from "../types/levels.js";
+import type {
+  LevelConfig,
+  ReferencePhaseBand,
+  ReferencePhasesUnified,
+} from "../types/levels.js";
 import { resolveServerConfigFile } from "../utils/resolveConfigPath.js";
 
 function overridesPath() {
@@ -16,6 +20,7 @@ type OverrideEntry = Partial<{
     mid?: Partial<ReferencePhaseBand>;
     late?: Partial<ReferencePhaseBand>;
   };
+  referencePhasesUnified: Partial<ReferencePhasesUnified>;
 }>;
 
 type OverridesFile = Record<string, OverrideEntry>;
@@ -56,6 +61,10 @@ function mergeBand(
   };
 }
 
+function copyUnified(u: ReferencePhasesUnified): ReferencePhasesUnified {
+  return { early: u.early, mid: u.mid, late: u.late };
+}
+
 /**
  * Merges YAML `base` with optional JSON overrides. Keys in the override file replace base only when present.
  */
@@ -73,6 +82,9 @@ export function mergeWithOverrides(
             mid: { ...base.referencePhases.mid },
             late: { ...base.referencePhases.late },
           }
+        : undefined,
+      referencePhasesUnified: base.referencePhasesUnified
+        ? copyUnified(base.referencePhasesUnified)
         : undefined,
     };
   }
@@ -95,6 +107,15 @@ export function mergeWithOverrides(
       mid: { ...base.referencePhases.mid },
       late: { ...base.referencePhases.late },
     };
+  }
+  if (o.referencePhasesUnified && base.referencePhasesUnified) {
+    out.referencePhasesUnified = {
+      early: o.referencePhasesUnified.early ?? base.referencePhasesUnified.early,
+      mid: o.referencePhasesUnified.mid ?? base.referencePhasesUnified.mid,
+      late: o.referencePhasesUnified.late ?? base.referencePhasesUnified.late,
+    };
+  } else if (base.referencePhasesUnified) {
+    out.referencePhasesUnified = copyUnified(base.referencePhasesUnified);
   }
   return out;
 }

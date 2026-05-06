@@ -4,6 +4,13 @@ export type ReferencePhaseBand = {
   nonfiction: string;
 };
 
+/** Level 1: one reference sample per band (no fiction vs nonfiction split). */
+export type ReferencePhasesUnified = {
+  early: string;
+  mid: string;
+  late: string;
+};
+
 export type LevelConfig = {
   cefr: string;
   name: string;
@@ -26,6 +33,8 @@ export type LevelConfig = {
     mid: ReferencePhaseBand;
     late: ReferencePhaseBand;
   };
+  /** Level 1: unified reference text per band (early/mid/late). */
+  referencePhasesUnified?: ReferencePhasesUnified;
 };
 
 export type LevelsData = {

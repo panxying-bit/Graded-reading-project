@@ -1,0 +1,752 @@
+{
+  "level": "level1",
+  "description": "24 umbrella themes once per band (1–48, 49–96, 97–144). Each theme uses two lesson slots (two phrase-book books per theme per band): 144 slots, 72 theme-book units.",
+  "themeCycle": [
+    "feelings",
+    "family members",
+    "body parts",
+    "face",
+    "senses",
+    "animals",
+    "toys",
+    "food",
+    "drinks",
+    "everyday items",
+    "stationery",
+    "furniture",
+    "rooms",
+    "numbers",
+    "colors",
+    "shapes",
+    "size",
+    "position",
+    "actions",
+    "daily routines",
+    "weather",
+    "plants",
+    "places",
+    "clothes"
+  ],
+  "lessons": [
+    {
+      "lesson": 1,
+      "theme": "feelings",
+      "lessonTitle": "Feelings — Early 1"
+    },
+    {
+      "lesson": 2,
+      "theme": "feelings",
+      "lessonTitle": "Feelings — Early 2"
+    },
+    {
+      "lesson": 3,
+      "theme": "family members",
+      "lessonTitle": "Family Members — Early 1"
+    },
+    {
+      "lesson": 4,
+      "theme": "family members",
+      "lessonTitle": "Family Members — Early 2"
+    },
+    {
+      "lesson": 5,
+      "theme": "body parts",
+      "lessonTitle": "Body Parts — Early 1"
+    },
+    {
+      "lesson": 6,
+      "theme": "body parts",
+      "lessonTitle": "Body Parts — Early 2"
+    },
+    {
+      "lesson": 7,
+      "theme": "face",
+      "lessonTitle": "Face — Early 1"
+    },
+    {
+      "lesson": 8,
+      "theme": "face",
+      "lessonTitle": "Face — Early 2"
+    },
+    {
+      "lesson": 9,
+      "theme": "senses",
+      "lessonTitle": "Senses — Early 1"
+    },
+    {
+      "lesson": 10,
+      "theme": "senses",
+      "lessonTitle": "Senses — Early 2"
+    },
+    {
+      "lesson": 11,
+      "theme": "animals",
+      "lessonTitle": "Animals — Early 1"
+    },
+    {
+      "lesson": 12,
+      "theme": "animals",
+      "lessonTitle": "Animals — Early 2"
+    },
+    {
+      "lesson": 13,
+      "theme": "toys",
+      "lessonTitle": "Toys — Early 1"
+    },
+    {
+      "lesson": 14,
+      "theme": "toys",
+      "lessonTitle": "Toys — Early 2"
+    },
+    {
+      "lesson": 15,
+      "theme": "food",
+      "lessonTitle": "Food — Early 1"
+    },
+    {
+      "lesson": 16,
+      "theme": "food",
+      "lessonTitle": "Food — Early 2"
+    },
+    {
+      "lesson": 17,
+      "theme": "drinks",
+      "lessonTitle": "Drinks — Early 1"
+    },
+    {
+      "lesson": 18,
+      "theme": "drinks",
+      "lessonTitle": "Drinks — Early 2"
+    },
+    {
+      "lesson": 19,
+      "theme": "everyday items",
+      "lessonTitle": "Everyday Items — Early 1"
+    },
+    {
+      "lesson": 20,
+      "theme": "everyday items",
+      "lessonTitle": "Everyday Items — Early 2"
+    },
+    {
+      "lesson": 21,
+      "theme": "stationery",
+      "lessonTitle": "Stationery — Early 1"
+    },
+    {
+      "lesson": 22,
+      "theme": "stationery",
+      "lessonTitle": "Stationery — Early 2"
+    },
+    {
+      "lesson": 23,
+      "theme": "furniture",
+      "lessonTitle": "Furniture — Early 1"
+    },
+    {
+      "lesson": 24,
+      "theme": "furniture",
+      "lessonTitle": "Furniture — Early 2"
+    },
+    {
+      "lesson": 25,
+      "theme": "rooms",
+      "lessonTitle": "Rooms — Early 1"
+    },
+    {
+      "lesson": 26,
+      "theme": "rooms",
+      "lessonTitle": "Rooms — Early 2"
+    },
+    {
+      "lesson": 27,
+      "theme": "numbers",
+      "lessonTitle": "Numbers — Early 1"
+    },
+    {
+      "lesson": 28,
+      "theme": "numbers",
+      "lessonTitle": "Numbers — Early 2"
+    },
+    {
+      "lesson": 29,
+      "theme": "colors",
+      "lessonTitle": "Colors — Early 1"
+    },
+    {
+      "lesson": 30,
+      "theme": "colors",
+      "lessonTitle": "Colors — Early 2"
+    },
+    {
+      "lesson": 31,
+      "theme": "shapes",
+      "lessonTitle": "Shapes — Early 1"
+    },
+    {
+      "lesson": 32,
+      "theme": "shapes",
+      "lessonTitle": "Shapes — Early 2"
+    },
+    {
+      "lesson": 33,
+      "theme": "size",
+      "lessonTitle": "Size — Early 1"
+    },
+    {
+      "lesson": 34,
+      "theme": "size",
+      "lessonTitle": "Size — Early 2"
+    },
+    {
+      "lesson": 35,
+      "theme": "position",
+      "lessonTitle": "Position — Early 1"
+    },
+    {
+      "lesson": 36,
+      "theme": "position",
+      "lessonTitle": "Position — Early 2"
+    },
+    {
+      "lesson": 37,
+      "theme": "actions",
+      "lessonTitle": "Actions — Early 1"
+    },
+    {
+      "lesson": 38,
+      "theme": "actions",
+      "lessonTitle": "Actions — Early 2"
+    },
+    {
+      "lesson": 39,
+      "theme": "daily routines",
+      "lessonTitle": "Daily Routines — Early 1"
+    },
+    {
+      "lesson": 40,
+      "theme": "daily routines",
+      "lessonTitle": "Daily Routines — Early 2"
+    },
+    {
+      "lesson": 41,
+      "theme": "weather",
+      "lessonTitle": "Weather — Early 1"
+    },
+    {
+      "lesson": 42,
+      "theme": "weather",
+      "lessonTitle": "Weather — Early 2"
+    },
+    {
+      "lesson": 43,
+      "theme": "plants",
+      "lessonTitle": "Plants — Early 1"
+    },
+    {
+      "lesson": 44,
+      "theme": "plants",
+      "lessonTitle": "Plants — Early 2"
+    },
+    {
+      "lesson": 45,
+      "theme": "places",
+      "lessonTitle": "Places — Early 1"
+    },
+    {
+      "lesson": 46,
+      "theme": "places",
+      "lessonTitle": "Places — Early 2"
+    },
+    {
+      "lesson": 47,
+      "theme": "clothes",
+      "lessonTitle": "Clothes — Early 1"
+    },
+    {
+      "lesson": 48,
+      "theme": "clothes",
+      "lessonTitle": "Clothes — Early 2"
+    },
+    {
+      "lesson": 49,
+      "theme": "feelings",
+      "lessonTitle": "Feelings — Mid 1"
+    },
+    {
+      "lesson": 50,
+      "theme": "feelings",
+      "lessonTitle": "Feelings — Mid 2"
+    },
+    {
+      "lesson": 51,
+      "theme": "family members",
+      "lessonTitle": "Family Members — Mid 1"
+    },
+    {
+      "lesson": 52,
+      "theme": "family members",
+      "lessonTitle": "Family Members — Mid 2"
+    },
+    {
+      "lesson": 53,
+      "theme": "body parts",
+      "lessonTitle": "Body Parts — Mid 1"
+    },
+    {
+      "lesson": 54,
+      "theme": "body parts",
+      "lessonTitle": "Body Parts — Mid 2"
+    },
+    {
+      "lesson": 55,
+      "theme": "face",
+      "lessonTitle": "Face — Mid 1"
+    },
+    {
+      "lesson": 56,
+      "theme": "face",
+      "lessonTitle": "Face — Mid 2"
+    },
+    {
+      "lesson": 57,
+      "theme": "senses",
+      "lessonTitle": "Senses — Mid 1"
+    },
+    {
+      "lesson": 58,
+      "theme": "senses",
+      "lessonTitle": "Senses — Mid 2"
+    },
+    {
+      "lesson": 59,
+      "theme": "animals",
+      "lessonTitle": "Animals — Mid 1"
+    },
+    {
+      "lesson": 60,
+      "theme": "animals",
+      "lessonTitle": "Animals — Mid 2"
+    },
+    {
+      "lesson": 61,
+      "theme": "toys",
+      "lessonTitle": "Toys — Mid 1"
+    },
+    {
+      "lesson": 62,
+      "theme": "toys",
+      "lessonTitle": "Toys — Mid 2"
+    },
+    {
+      "lesson": 63,
+      "theme": "food",
+      "lessonTitle": "Food — Mid 1"
+    },
+    {
+      "lesson": 64,
+      "theme": "food",
+      "lessonTitle": "Food — Mid 2"
+    },
+    {
+      "lesson": 65,
+      "theme": "drinks",
+      "lessonTitle": "Drinks — Mid 1"
+    },
+    {
+      "lesson": 66,
+      "theme": "drinks",
+      "lessonTitle": "Drinks — Mid 2"
+    },
+    {
+      "lesson": 67,
+      "theme": "everyday items",
+      "lessonTitle": "Everyday Items — Mid 1"
+    },
+    {
+      "lesson": 68,
+      "theme": "everyday items",
+      "lessonTitle": "Everyday Items — Mid 2"
+    },
+    {
+      "lesson": 69,
+      "theme": "stationery",
+      "lessonTitle": "Stationery — Mid 1"
+    },
+    {
+      "lesson": 70,
+      "theme": "stationery",
+      "lessonTitle": "Stationery — Mid 2"
+    },
+    {
+      "lesson": 71,
+      "theme": "furniture",
+      "lessonTitle": "Furniture — Mid 1"
+    },
+    {
+      "lesson": 72,
+      "theme": "furniture",
+      "lessonTitle": "Furniture — Mid 2"
+    },
+    {
+      "lesson": 73,
+      "theme": "rooms",
+      "lessonTitle": "Rooms — Mid 1"
+    },
+    {
+      "lesson": 74,
+      "theme": "rooms",
+      "lessonTitle": "Rooms — Mid 2"
+    },
+    {
+      "lesson": 75,
+      "theme": "numbers",
+      "lessonTitle": "Numbers — Mid 1"
+    },
+    {
+      "lesson": 76,
+      "theme": "numbers",
+      "lessonTitle": "Numbers — Mid 2"
+    },
+    {
+      "lesson": 77,
+      "theme": "colors",
+      "lessonTitle": "Colors — Mid 1"
+    },
+    {
+      "lesson": 78,
+      "theme": "colors",
+      "lessonTitle": "Colors — Mid 2"
+    },
+    {
+      "lesson": 79,
+      "theme": "shapes",
+      "lessonTitle": "Shapes — Mid 1"
+    },
+    {
+      "lesson": 80,
+      "theme": "shapes",
+      "lessonTitle": "Shapes — Mid 2"
+    },
+    {
+      "lesson": 81,
+      "theme": "size",
+      "lessonTitle": "Size — Mid 1"
+    },
+    {
+      "lesson": 82,
+      "theme": "size",
+      "lessonTitle": "Size — Mid 2"
+    },
+    {
+      "lesson": 83,
+      "theme": "position",
+      "lessonTitle": "Position — Mid 1"
+    },
+    {
+      "lesson": 84,
+      "theme": "position",
+      "lessonTitle": "Position — Mid 2"
+    },
+    {
+      "lesson": 85,
+      "theme": "actions",
+      "lessonTitle": "Actions — Mid 1"
+    },
+    {
+      "lesson": 86,
+      "theme": "actions",
+      "lessonTitle": "Actions — Mid 2"
+    },
+    {
+      "lesson": 87,
+      "theme": "daily routines",
+      "lessonTitle": "Daily Routines — Mid 1"
+    },
+    {
+      "lesson": 88,
+      "theme": "daily routines",
+      "lessonTitle": "Daily Routines — Mid 2"
+    },
+    {
+      "lesson": 89,
+      "theme": "weather",
+      "lessonTitle": "Weather — Mid 1"
+    },
+    {
+      "lesson": 90,
+      "theme": "weather",
+      "lessonTitle": "Weather — Mid 2"
+    },
+    {
+      "lesson": 91,
+      "theme": "plants",
+      "lessonTitle": "Plants — Mid 1"
+    },
+    {
+      "lesson": 92,
+      "theme": "plants",
+      "lessonTitle": "Plants — Mid 2"
+    },
+    {
+      "lesson": 93,
+      "theme": "places",
+      "lessonTitle": "Places — Mid 1"
+    },
+    {
+      "lesson": 94,
+      "theme": "places",
+      "lessonTitle": "Places — Mid 2"
+    },
+    {
+      "lesson": 95,
+      "theme": "clothes",
+      "lessonTitle": "Clothes — Mid 1"
+    },
+    {
+      "lesson": 96,
+      "theme": "clothes",
+      "lessonTitle": "Clothes — Mid 2"
+    },
+    {
+      "lesson": 97,
+      "theme": "feelings",
+      "lessonTitle": "Feelings — Late 1"
+    },
+    {
+      "lesson": 98,
+      "theme": "feelings",
+      "lessonTitle": "Feelings — Late 2"
+    },
+    {
+      "lesson": 99,
+      "theme": "family members",
+      "lessonTitle": "Family Members — Late 1"
+    },
+    {
+      "lesson": 100,
+      "theme": "family members",
+      "lessonTitle": "Family Members — Late 2"
+    },
+    {
+      "lesson": 101,
+      "theme": "body parts",
+      "lessonTitle": "Body Parts — Late 1"
+    },
+    {
+      "lesson": 102,
+      "theme": "body parts",
+      "lessonTitle": "Body Parts — Late 2"
+    },
+    {
+      "lesson": 103,
+      "theme": "face",
+      "lessonTitle": "Face — Late 1"
+    },
+    {
+      "lesson": 104,
+      "theme": "face",
+      "lessonTitle": "Face — Late 2"
+    },
+    {
+      "lesson": 105,
+      "theme": "senses",
+      "lessonTitle": "Senses — Late 1"
+    },
+    {
+      "lesson": 106,
+      "theme": "senses",
+      "lessonTitle": "Senses — Late 2"
+    },
+    {
+      "lesson": 107,
+      "theme": "animals",
+      "lessonTitle": "Animals — Late 1"
+    },
+    {
+      "lesson": 108,
+      "theme": "animals",
+      "lessonTitle": "Animals — Late 2"
+    },
+    {
+      "lesson": 109,
+      "theme": "toys",
+      "lessonTitle": "Toys — Late 1"
+    },
+    {
+      "lesson": 110,
+      "theme": "toys",
+      "lessonTitle": "Toys — Late 2"
+    },
+    {
+      "lesson": 111,
+      "theme": "food",
+      "lessonTitle": "Food — Late 1"
+    },
+    {
+      "lesson": 112,
+      "theme": "food",
+      "lessonTitle": "Food — Late 2"
+    },
+    {
+      "lesson": 113,
+      "theme": "drinks",
+      "lessonTitle": "Drinks — Late 1"
+    },
+    {
+      "lesson": 114,
+      "theme": "drinks",
+      "lessonTitle": "Drinks — Late 2"
+    },
+    {
+      "lesson": 115,
+      "theme": "everyday items",
+      "lessonTitle": "Everyday Items — Late 1"
+    },
+    {
+      "lesson": 116,
+      "theme": "everyday items",
+      "lessonTitle": "Everyday Items — Late 2"
+    },
+    {
+      "lesson": 117,
+      "theme": "stationery",
+      "lessonTitle": "Stationery — Late 1"
+    },
+    {
+      "lesson": 118,
+      "theme": "stationery",
+      "lessonTitle": "Stationery — Late 2"
+    },
+    {
+      "lesson": 119,
+      "theme": "furniture",
+      "lessonTitle": "Furniture — Late 1"
+    },
+    {
+      "lesson": 120,
+      "theme": "furniture",
+      "lessonTitle": "Furniture — Late 2"
+    },
+    {
+      "lesson": 121,
+      "theme": "rooms",
+      "lessonTitle": "Rooms — Late 1"
+    },
+    {
+      "lesson": 122,
+      "theme": "rooms",
+      "lessonTitle": "Rooms — Late 2"
+    },
+    {
+      "lesson": 123,
+      "theme": "numbers",
+      "lessonTitle": "Numbers — Late 1"
+    },
+    {
+      "lesson": 124,
+      "theme": "numbers",
+      "lessonTitle": "Numbers — Late 2"
+    },
+    {
+      "lesson": 125,
+      "theme": "colors",
+      "lessonTitle": "Colors — Late 1"
+    },
+    {
+      "lesson": 126,
+      "theme": "colors",
+      "lessonTitle": "Colors — Late 2"
+    },
+    {
+      "lesson": 127,
+      "theme": "shapes",
+      "lessonTitle": "Shapes — Late 1"
+    },
+    {
+      "lesson": 128,
+      "theme": "shapes",
+      "lessonTitle": "Shapes — Late 2"
+    },
+    {
+      "lesson": 129,
+      "theme": "size",
+      "lessonTitle": "Size — Late 1"
+    },
+    {
+      "lesson": 130,
+      "theme": "size",
+      "lessonTitle": "Size — Late 2"
+    },
+    {
+      "lesson": 131,
+      "theme": "position",
+      "lessonTitle": "Position — Late 1"
+    },
+    {
+      "lesson": 132,
+      "theme": "position",
+      "lessonTitle": "Position — Late 2"
+    },
+    {
+      "lesson": 133,
+      "theme": "actions",
+      "lessonTitle": "Actions — Late 1"
+    },
+    {
+      "lesson": 134,
+      "theme": "actions",
+      "lessonTitle": "Actions — Late 2"
+    },
+    {
+      "lesson": 135,
+      "theme": "daily routines",
+      "lessonTitle": "Daily Routines — Late 1"
+    },
+    {
+      "lesson": 136,
+      "theme": "daily routines",
+      "lessonTitle": "Daily Routines — Late 2"
+    },
+    {
+      "lesson": 137,
+      "theme": "weather",
+      "lessonTitle": "Weather — Late 1"
+    },
+    {
+      "lesson": 138,
+      "theme": "weather",
+      "lessonTitle": "Weather — Late 2"
+    },
+    {
+      "lesson": 139,
+      "theme": "plants",
+      "lessonTitle": "Plants — Late 1"
+    },
+    {
+      "lesson": 140,
+      "theme": "plants",
+      "lessonTitle": "Plants — Late 2"
+    },
+    {
+      "lesson": 141,
+      "theme": "places",
+      "lessonTitle": "Places — Late 1"
+    },
+    {
+      "lesson": 142,
+      "theme": "places",
+      "lessonTitle": "Places — Late 2"
+    },
+    {
+      "lesson": 143,
+      "theme": "clothes",
+      "lessonTitle": "Clothes — Late 1"
+    },
+    {
+      "lesson": 144,
+      "theme": "clothes",
+      "lessonTitle": "Clothes — Late 2"
+    }
+  ]
+}

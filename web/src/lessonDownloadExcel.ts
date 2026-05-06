@@ -10,6 +10,8 @@ import {
   displayStructure,
   displayTense,
 } from "./exportDisplayLabels";
+import { cambridgeLabelText } from "./cambridgeLookup";
+import { cefrLabelText } from "./cefrLookup";
 import { triggerDownloadBlob } from "./lessonDownloadZip";
 
 export function makeExcelFilename(levelId: string) {
@@ -40,6 +42,7 @@ export function buildLessonsSummaryWorkbook(
     "虚构/非虚构",
     "主题(保存时)",
     "课文标题(保存时)",
+    "文本内容构思(保存时)",
     "课纲主题",
     "课纲课文标题",
     "结构类型",
@@ -52,6 +55,30 @@ export function buildLessonsSummaryWorkbook(
     "为何选此句型",
     "同难度变体(3句)",
     "教学重点",
+    "定表词1",
+    "定表CEFR(欧框)1",
+    "定表剑桥级别1",
+    "定表原句1",
+    "定表词2",
+    "定表CEFR(欧框)2",
+    "定表剑桥级别2",
+    "定表原句2",
+    "定表词3",
+    "定表CEFR(欧框)3",
+    "定表剑桥级别3",
+    "定表原句3",
+    "定表词4",
+    "定表CEFR(欧框)4",
+    "定表剑桥级别4",
+    "定表原句4",
+    "定表词5",
+    "定表CEFR(欧框)5",
+    "定表剑桥级别5",
+    "定表原句5",
+    "定表词6",
+    "定表CEFR(欧框)6",
+    "定表剑桥级别6",
+    "定表原句6",
   ];
 
   const rows: Row[] = [headers];
@@ -78,6 +105,15 @@ export function buildLessonsSummaryWorkbook(
       sp?.variations?.length === 3
         ? sp.variations.map((s) => s.trim()).join(" | ")
         : "";
+    const vf = rec.vocabFinalTable?.items ?? [];
+    const vCells: string[] = [];
+    for (let j = 0; j < 4; j++) {
+      const w = vf[j]?.word?.trim() ?? "";
+      vCells.push(w);
+      vCells.push(w ? cefrLabelText(w) : "");
+      vCells.push(w ? cambridgeLabelText(w) : "");
+      vCells.push(vf[j]?.sentence?.trim() ?? "");
+    }
     rows.push([
       i,
       levelOrder,
@@ -87,6 +123,7 @@ export function buildLessonsSummaryWorkbook(
       displayFiction(rec.fictionOrNonfiction),
       rec.topic?.trim() ?? "",
       rec.lessonTitle?.trim() ?? "",
+      rec.contentBrief?.trim() ?? "",
       planTheme,
       planLt,
       displayStructure(rec.structureType),
@@ -99,6 +136,7 @@ export function buildLessonsSummaryWorkbook(
       sp?.whyPattern?.trim() ?? "",
       varsStr,
       sp?.teachingFocus?.trim() ?? "",
+      ...vCells,
     ]);
   }
 
@@ -112,6 +150,7 @@ export function buildLessonsSummaryWorkbook(
     { wch: 16 },
     { wch: 32 },
     { wch: 24 },
+    { wch: 36 },
     { wch: 20 },
     { wch: 24 },
     { wch: 24 },
@@ -124,6 +163,30 @@ export function buildLessonsSummaryWorkbook(
     { wch: 36 },
     { wch: 48 },
     { wch: 36 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 40 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 40 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 40 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 40 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 40 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 40 },
   ];
 
   const wb = XLSX.utils.book_new();

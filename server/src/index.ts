@@ -20,15 +20,27 @@ import {
   saveOverrideForLevel,
 } from "./services/promptOverrideStore.js";
 import {
+  buildLevel1ProofreadMessages,
+  buildLevel1RefineMessages,
+  buildLevel2ProofreadMessages,
+  buildLevel2RefineMessages,
   buildLevel3ProofreadMessages,
   buildLevel3RefineMessages,
   buildMessages,
+  type ChatMessage,
 } from "./services/promptResolver.js";
 import { callChatCompletions, LlmError } from "./services/llmClient.js";
+import {
+  isBookPipelineLevel,
+  isPagedBookLevel,
+  type BookPipelineLevelId,
+  type PagedBookLevelId,
+} from "./bookPhase.js";
 import { runLevel3WithWordRepair } from "./services/level3WordRepair.js";
 import {
   callImageGeneration,
-  ImageGenError,
+  isImageGenError,
+  isVolcImageGenerationConfigured,
 } from "./services/imageGenClient.js";
 import { imageGenerateBodySchema } from "./schemas/imageGenerateBody.js";
 import { getLessonPlan } from "./services/lessonCurriculum.js";
@@ -36,11 +48,44 @@ import {
   sentencePatternBodySchema,
   sentencePatternResultSchema,
 } from "./schemas/sentencePatternBody.js";
+import {
+  vocabCandidateBodySchema,
+  vocabCandidateResponseSchema,
+} from "./schemas/vocabCandidateBody.js";
 import { buildSentencePatternUserMessage } from "./services/sentencePatternLoader.js";
+import { buildVocabCandidateUserMessage } from "./services/vocabCandidateLoader.js";
+import {
+  filterLevel3CandidatesAgainstL0L2Mastery,
+  filterLevel4CandidatesAgainstL0L3Mastery,
+} from "./services/masteryWordlist.js";
+import { filterCandidatesAgainstExcludeHeadwords } from "./services/vocabCandidateExclude.js";
 import { extractPassageTextForPattern } from "./utils/extractPassageText.js";
-import type { ChatMessage } from "./services/promptResolver.js";
+import { ttsBodySchema } from "./schemas/ttsBody.js";
+import { synthesizeAzureSpeechToMp3 } from "./services/azureSpeechTts.js";
+import {
+  PACKAGE_DESCRIPTION,
+  PACKAGE_VERSION,
+} from "./packageInfo.js";
 
-const app = Fastify({ logger: true });
+/** Non-LlmError catch: include upstream hint in JSON `message` for easier diagnosis. */
+function formatInternalCatchMessage(e: unknown): string {
+  const prefix = "Unexpected server error";
+  if (e instanceof Error && e.message.trim()) {
+    const m = e.message.trim();
+    const tail = m.length > 1000 ? `${m.slice(0, 1000)}…` : m;
+    return `${prefix}: ${tail}`;
+  }
+  const raw = typeof e === "string" ? e : String(e);
+  const t = raw.trim();
+  if (t && t !== "[object Object]") {
+    const tail = t.length > 1000 ? `${t.slice(0, 1000)}…` : t;
+    return `${prefix}: ${tail}`;
+  }
+  return prefix;
+}
+
+/** Chained illustration refs send prior page as data URLs (base64); default 1MB is too small. */
+const app = Fastify({ logger: true, bodyLimit: 40 * 1024 * 1024 });
 
 await app.register(cors, {
   origin: true,
@@ -49,30 +94,42 @@ await app.register(cors, {
 // Browsers open `/` by default; this service is API-only without a static UI on 3000.
 app.get("/", async () => ({
   ok: true,
+  version: PACKAGE_VERSION,
+  releaseNote: PACKAGE_DESCRIPTION,
   message: "Graded reading API. No HTML at /. Use the web app (e.g. Vite dev) or call /api/* below.",
   endpoints: {
     health: "GET /health",
     levels: "GET /api/levels",
     "level-lesson-plan": "GET /api/levels/:levelId/lessons",
     generate: "POST /api/generate",
-    "generate-draft": "POST /api/generate/draft (level3 stage 1)",
-    "generate-refine": "POST /api/generate/refine (level3 stage 2 精修)",
-    "generate-proofread": "POST /api/generate/proofread (level3 stage 3 定稿)",
+    "generate-draft": "POST /api/generate/draft (level1|level2|level3|level4 stage 1)",
+    "generate-refine": "POST /api/generate/refine (level1|level2|level3|level4 stage 2 精修)",
+    "generate-proofread": "POST /api/generate/proofread (level1|level2|level3|level4 stage 3 定稿)",
     "image-generate": "POST /api/images/generate",
+    "images-enabled":
+      "GET /api/images/enabled (IMAGE_API_BASE_URL + IMAGE_API_KEY configured?)",
     "sentence-pattern":
       "POST /api/learning/sentence-pattern (定稿/课文句型+例句+变体; prompt: config/sentence-pattern-prompt.md)",
+    "vocab-candidates":
+      "POST /api/learning/vocab-candidates (定稿备选词; prompt: config/prompts/vocab-candidate-prompt.md)",
     "prompts-get-put": "GET|PUT|DELETE /api/prompts/:levelId",
+    "speech-tts-enabled":
+      "GET /api/speech/tts/enabled (Azure Speech configured? no secrets)",
+    "speech-tts":
+      "POST /api/speech/tts JSON { text } → audio/mpeg (Azure TTS; needs AZURE_SPEECH_KEY)",
   },
 }));
 
 app.get("/health", async () => ({
   ok: true,
   service: "graded-reading-platform",
+  version: PACKAGE_VERSION,
 }));
 
 app.get("/api/health", async () => ({
   ok: true,
   service: "graded-reading-platform",
+  version: PACKAGE_VERSION,
 }));
 
 app.get("/api/levels", async (request, reply) => {
@@ -204,6 +261,7 @@ app.post<{
     level,
     topic,
     lessonTitle,
+    contentBrief,
     wordCount,
     lesson,
     fictionOrNonfiction,
@@ -230,6 +288,7 @@ app.post<{
     messages = buildMessages(def, {
       topic,
       lessonTitle,
+      contentBrief,
       wordCount,
       lesson,
       levelId: level,
@@ -246,14 +305,20 @@ app.post<{
     });
   }
 
-  const isLevel3Phased = level === "level3" && def.referencePhases != null;
+  const needsBookJsonRepair =
+    (isPagedBookLevel(level) && def.referencePhases != null) ||
+    (level === "level1" && def.referencePhasesUnified != null) ||
+    (level === "level2" && def.referencePhases != null);
 
   try {
-    if (isLevel3Phased) {
-      const { text, repairRounds, level3WordCount } = await runLevel3WithWordRepair(
-        messages,
-        lesson,
-      );
+    if (needsBookJsonRepair) {
+      const { text, repairRounds, level3WordCount } =
+        await runLevel3WithWordRepair(
+          messages,
+          lesson,
+          level as BookPipelineLevelId,
+          def.cefr,
+        );
       return {
         level,
         cefr: def.cefr,
@@ -280,7 +345,7 @@ app.post<{
     request.log.error(e);
     return reply.status(500).send({
       error: "INTERNAL",
-      message: "Unexpected server error",
+      message: formatInternalCatchMessage(e),
     });
   }
 });
@@ -300,6 +365,7 @@ app.post<{
     level,
     topic,
     lessonTitle,
+    contentBrief,
     wordCount,
     lesson,
     fictionOrNonfiction,
@@ -309,17 +375,22 @@ app.post<{
     draftExtraInstructions,
     previousDraftText,
   } = parsed.data;
-  if (level !== "level3") {
+  const def = getLevel(level);
+  if (!def) {
     return reply.status(400).send({
       error: "INVALID_LEVEL",
-      message: "POST /api/generate/draft is only for level: level3",
+      message: `Unknown level: ${level}`,
     });
   }
-  const def = getLevel(level);
-  if (!def?.referencePhases) {
+  const supportsDraft =
+    (level === "level1" && def.referencePhasesUnified != null) ||
+    (level === "level2" && def.referencePhases != null) ||
+    (isPagedBookLevel(level) && def.referencePhases != null);
+  if (!supportsDraft) {
     return reply.status(400).send({
       error: "INVALID_LEVEL",
-      message: "Level3 reference phases missing in config",
+      message:
+        "POST /api/generate/draft requires level1 (referencePhasesUnified), level2 (referencePhases), or level3/level4 (referencePhases)",
     });
   }
   let messages: ReturnType<typeof buildMessages>;
@@ -327,6 +398,7 @@ app.post<{
     messages = buildMessages(def, {
       topic,
       lessonTitle,
+      contentBrief,
       wordCount,
       lesson,
       levelId: level,
@@ -363,7 +435,7 @@ app.post<{
     request.log.error(e);
     return reply.status(500).send({
       error: "INTERNAL",
-      message: "Unexpected server error",
+      message: formatInternalCatchMessage(e),
     });
   }
 });
@@ -379,23 +451,60 @@ app.post<{
       message: parsed.error.flatten().formErrors.join("; ") || "Invalid body",
     });
   }
-  const { lesson, draftText, topic, lessonTitle, fictionOrNonfiction } =
-    parsed.data;
-  const def = getLevel("level3");
+  const {
+    level,
+    lesson,
+    draftText,
+    topic,
+    lessonTitle,
+    contentBrief,
+    fictionOrNonfiction,
+    structureType,
+  } = parsed.data;
+  if (!isBookPipelineLevel(level)) {
+    return reply.status(400).send({
+      error: "INVALID_LEVEL",
+      message: "POST /api/generate/refine supports level1, level2, level3, level4 only",
+    });
+  }
+  const def = getLevel(level);
   if (!def) {
     return reply.status(400).send({
       error: "INVALID_LEVEL",
-      message: "Unknown level: level3",
+      message: `Unknown level: ${level}`,
     });
   }
-  let messages: ReturnType<typeof buildLevel3RefineMessages>;
+  let messages: ChatMessage[];
   try {
-    messages = buildLevel3RefineMessages(draftText, {
-      lesson,
-      topic,
-      lessonTitle,
-      fictionOrNonfiction,
-    });
+    messages =
+      level === "level1"
+        ? buildLevel1RefineMessages(draftText, {
+            cefr: def.cefr,
+            lesson,
+            topic,
+            lessonTitle,
+            contentBrief,
+            structureType,
+          })
+        : level === "level2"
+          ? buildLevel2RefineMessages(draftText, {
+              cefr: def.cefr,
+              lesson,
+              topic,
+              lessonTitle,
+              contentBrief,
+              fictionOrNonfiction,
+              structureType,
+            })
+          : buildLevel3RefineMessages(draftText, {
+              levelId: level as PagedBookLevelId,
+              cefr: def.cefr,
+              lesson,
+              topic,
+              lessonTitle,
+              contentBrief,
+              fictionOrNonfiction,
+            });
   } catch (e) {
     request.log.error(e);
     return reply.status(500).send({
@@ -404,13 +513,16 @@ app.post<{
     });
   }
   try {
-    const { text, repairRounds, level3WordCount } = await runLevel3WithWordRepair(
-      messages,
-      lesson,
-    );
+    const { text, repairRounds, level3WordCount } =
+      await runLevel3WithWordRepair(
+        messages,
+        lesson,
+        level as BookPipelineLevelId,
+        def.cefr,
+      );
     return {
       stage: "refine" as const,
-      level: "level3",
+      level,
       cefr: def.cefr,
       text,
       level3WordCount: {
@@ -428,7 +540,7 @@ app.post<{
     request.log.error(e);
     return reply.status(500).send({
       error: "INTERNAL",
-      message: "Unexpected server error",
+      message: formatInternalCatchMessage(e),
     });
   }
 });
@@ -444,21 +556,48 @@ app.post<{
       message: parsed.error.flatten().formErrors.join("; ") || "Invalid body",
     });
   }
-  const { bookText, lesson, topic, lessonTitle } = parsed.data;
-  const def = getLevel("level3");
+  const { level, bookText, lesson, topic, lessonTitle, contentBrief } =
+    parsed.data;
+  const def = getLevel(level);
   if (!def) {
     return reply.status(400).send({
       error: "INVALID_LEVEL",
-      message: "Unknown level: level3",
+      message: `Unknown level: ${level}`,
     });
   }
-  let messages: ReturnType<typeof buildLevel3ProofreadMessages>;
-  try {
-    messages = buildLevel3ProofreadMessages(bookText, {
-      lesson,
-      topic,
-      lessonTitle,
+  if (!isBookPipelineLevel(level)) {
+    return reply.status(400).send({
+      error: "INVALID_LEVEL",
+      message: "POST /api/generate/proofread supports level1, level2, level3, level4 only",
     });
+  }
+  let messages: ChatMessage[];
+  try {
+    messages =
+      level === "level1"
+        ? buildLevel1ProofreadMessages(bookText, {
+            cefr: def.cefr,
+            lesson,
+            topic,
+            lessonTitle,
+            contentBrief,
+          })
+        : level === "level2"
+          ? buildLevel2ProofreadMessages(bookText, {
+              cefr: def.cefr,
+              lesson,
+              topic,
+              lessonTitle,
+              contentBrief,
+            })
+          : buildLevel3ProofreadMessages(bookText, {
+              levelId: level as PagedBookLevelId,
+              cefr: def.cefr,
+              lesson,
+              topic,
+              lessonTitle,
+              contentBrief,
+            });
   } catch (e) {
     request.log.error(e);
     return reply.status(500).send({
@@ -470,7 +609,7 @@ app.post<{
     const text = await callChatCompletions(messages);
     return {
       stage: "proofread" as const,
-      level: "level3",
+      level,
       cefr: def.cefr,
       text,
     };
@@ -484,7 +623,7 @@ app.post<{
     request.log.error(e);
     return reply.status(500).send({
       error: "INTERNAL",
-      message: "Unexpected server error",
+      message: formatInternalCatchMessage(e),
     });
   }
 });
@@ -562,7 +701,7 @@ app.post<{
     request.log.error(e);
     return reply.status(500).send({
       error: "INTERNAL",
-      message: "Unexpected server error",
+      message: formatInternalCatchMessage(e),
     });
   }
   const stripped = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
@@ -596,6 +735,176 @@ app.post<{
   };
 });
 
+/** Step 1 vocabulary pool: 5–7 teachable words from passage. Prompt: config/prompts/vocab-candidate-prompt.md */
+app.post<{
+  Body: unknown;
+}>("/api/learning/vocab-candidates", async (request, reply) => {
+  const parsed = vocabCandidateBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: "INVALID_BODY",
+      message: parsed.error.flatten().formErrors.join("; ") || "Invalid body",
+    });
+  }
+  const { level, text, excludeHeadwords } = parsed.data;
+  const def = getLevel(level);
+  if (!def) {
+    return reply.status(400).send({
+      error: "INVALID_LEVEL",
+      message: `Unknown level: ${level}`,
+    });
+  }
+  const cefr = def.cefr ?? "A1";
+  const passage = extractPassageTextForPattern(text);
+  if (!passage.trim()) {
+    return reply.status(400).send({
+      error: "EMPTY_PASSAGE",
+      message: "No text to analyze after parsing (empty or invalid).",
+    });
+  }
+  const system: ChatMessage = {
+    role: "system",
+    content:
+      "You are an expert in English for young and teenage learners. Follow the user instructions exactly. Reply with a single valid JSON object only, with the key `candidates` (array) as specified. No markdown code fences, no extra top-level keys.",
+  };
+  const user: ChatMessage = {
+    role: "user",
+    content: buildVocabCandidateUserMessage(
+      passage,
+      cefr,
+      level,
+      excludeHeadwords,
+    ),
+  };
+  const messages: ChatMessage[] = [system, user];
+  let raw: string;
+  try {
+    try {
+      raw = await callChatCompletions(messages, {
+        temperature: 0.4,
+        responseFormat: { type: "json_object" },
+      });
+    } catch (e) {
+      if (e instanceof LlmError && e.statusCode === 400) {
+        request.log.warn(
+          "vocab-candidates: retrying without response_format (provider may not support json_object mode)",
+        );
+        raw = await callChatCompletions(messages, { temperature: 0.4 });
+      } else {
+        throw e;
+      }
+    }
+  } catch (e) {
+    if (e instanceof LlmError) {
+      return reply.status(e.statusCode).send({
+        error: e.code,
+        message: e.message,
+      });
+    }
+    request.log.error(e);
+    return reply.status(500).send({
+      error: "INTERNAL",
+      message: formatInternalCatchMessage(e),
+    });
+  }
+  const stripped = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  let data: unknown;
+  try {
+    data = JSON.parse(stripped) as unknown;
+  } catch {
+    return reply.status(502).send({
+      error: "INVALID_JSON",
+      message: "Model did not return valid JSON for vocabulary candidates.",
+    });
+  }
+  const out = vocabCandidateResponseSchema.safeParse(data);
+  if (!out.success) {
+    return reply.status(502).send({
+      error: "SCHEMA",
+      message: out.error.message,
+    });
+  }
+  let candidates = out.data.candidates;
+  let excludedByPriorMastery: { word: string; sentence: string }[] | undefined;
+  let priorMasteryFilterNote: string | undefined;
+  if (level === "level3") {
+    const { kept, removed } = filterLevel3CandidatesAgainstL0L2Mastery(
+      candidates,
+    );
+    candidates = kept;
+    if (removed.length > 0) {
+      excludedByPriorMastery = removed;
+      priorMasteryFilterNote = `已剔除 ${
+        removed.length
+      } 个与 Level 0–2 词表（Mastery 核心词）重名的候选项；剩余 ${kept.length} 个。`;
+    }
+  } else if (level === "level4") {
+    const { kept, removed } = filterLevel4CandidatesAgainstL0L3Mastery(
+      candidates,
+    );
+    candidates = kept;
+    if (removed.length > 0) {
+      excludedByPriorMastery = removed;
+      priorMasteryFilterNote = `已剔除 ${
+        removed.length
+      } 个与 Level 0–3 词表（Mastery 核心词）重名的候选项；剩余 ${kept.length} 个。`;
+    }
+  }
+  let excludedByOtherLessons:
+    | { word: string; sentence: string }[]
+    | undefined;
+  let otherLessonsFilterNote: string | undefined;
+  {
+    const { kept, removed } = filterCandidatesAgainstExcludeHeadwords(
+      candidates,
+      excludeHeadwords,
+    );
+    candidates = kept;
+    if (removed.length > 0) {
+      excludedByOtherLessons = removed;
+      otherLessonsFilterNote = `已剔除 ${
+        removed.length
+      } 个与本级别其他课已保存「定表词」重名的候选项；剩余 ${kept.length} 个。`;
+    }
+  }
+  return {
+    level,
+    cefr,
+    candidates,
+    ...(excludedByPriorMastery
+      ? { excludedByPriorMastery, priorMasteryFilterNote }
+      : {}),
+    ...(excludedByOtherLessons
+      ? { excludedByOtherLessons, otherLessonsFilterNote }
+      : {}),
+  };
+});
+
+app.get("/api/images/enabled", async (): Promise<{
+  enabled: boolean;
+  provider: "volc" | "getimg" | null;
+  /** Server-side soft cap for POST /api/images/generate prompt (Jimeng/getimg). */
+  promptMaxChars: number;
+  /** True when ILLUSTRATION_DEBUG_MINIMAL_PROMPT is set (client prompt + refs ignored). */
+  debugMinimalPromptActive: boolean;
+}> => {
+  const volc = isVolcImageGenerationConfigured();
+  const getimg = Boolean(
+    env.imageApiBaseUrl?.trim() && env.imageApiKey?.trim(),
+  );
+  const provider = volc ? "volc" : getimg ? "getimg" : null;
+  return {
+    enabled: volc || getimg,
+    provider,
+    promptMaxChars: env.imagePromptMaxChars,
+    debugMinimalPromptActive: env.illustrationDebugMinimalPrompt.length > 0,
+  };
+});
+
 app.post<{
   Body: unknown;
 }>("/api/images/generate", async (request, reply) => {
@@ -606,16 +915,56 @@ app.post<{
       message: parsed.error.flatten().formErrors.join("; ") || "Invalid body",
     });
   }
-  const { prompt, referenceImageUrls } = parsed.data;
+  let { prompt, referenceImageUrls, layoutPreset, qualityTier } =
+    parsed.data;
+  if (env.illustrationDebugMinimalPrompt) {
+    request.log.warn(
+      {
+        clientPromptLen: prompt.length,
+        hadRefs: Boolean(referenceImageUrls?.length),
+        replacedBy: "ILLUSTRATION_DEBUG_MINIMAL_PROMPT",
+      },
+      "[imageGen] debug minimal prompt — ignoring client body prompt and reference images",
+    );
+    prompt = env.illustrationDebugMinimalPrompt;
+    referenceImageUrls = undefined;
+  }
   try {
-    const out = await callImageGeneration({ prompt, referenceImageUrls });
+    const out = await callImageGeneration({
+      prompt,
+      referenceImageUrls,
+      layoutPreset,
+      qualityTier,
+    });
+    const t = out.timings;
+    request.log.info(
+      `[imageGen] ok provider=${t.provider} serverTotalMs=${t.serverTotalMs}` +
+        (t.volcSubmitMs != null ? ` volcSubmitMs=${t.volcSubmitMs}` : "") +
+        (t.volcPollHttpMs != null ? ` volcPollHttpMs=${t.volcPollHttpMs}` : "") +
+        (t.volcPollSleepMs != null ? ` volcPollSleepMs=${t.volcPollSleepMs}` : "") +
+        (t.volcPollAttempts != null ? ` attempts=${t.volcPollAttempts}` : "") +
+        (t.getimgUpstreamMs != null ? ` getimgUpstreamMs=${t.getimgUpstreamMs}` : ""),
+    );
     return {
       imageUrl: out.imageUrl,
       b64Json: out.b64Json,
-      model: env.imageModel,
+      model: isVolcImageGenerationConfigured()
+        ? env.volcVisualReqKey
+        : env.imageModel,
+      timings: out.timings,
     };
   } catch (e) {
-    if (e instanceof ImageGenError) {
+    if (isImageGenError(e)) {
+      if (e.code === "VOLC_TASK" || e.code === "VOLC_API" || e.code === "VOLC_SDK") {
+        request.log.warn(
+          {
+            imageGenCode: e.code,
+            statusCode: e.statusCode,
+            messagePreview: e.message.slice(0, 1200),
+          },
+          "[imageGen] upstream image error",
+        );
+      }
       return reply.status(e.statusCode).send({
         error: e.code,
         message: e.message,
@@ -624,7 +973,49 @@ app.post<{
     request.log.error(e);
     return reply.status(500).send({
       error: "INTERNAL",
-      message: e instanceof Error ? e.message : "Image generation failed",
+      message: formatInternalCatchMessage(e),
+    });
+  }
+});
+
+app.get("/api/speech/tts/enabled", async () => ({
+  enabled: Boolean(env.azureSpeechKey?.trim()),
+}));
+
+app.post<{
+  Body: unknown;
+}>("/api/speech/tts", async (request, reply) => {
+  if (!env.azureSpeechKey?.trim()) {
+    return reply.status(503).send({
+      error: "TTS_DISABLED",
+      message:
+        "Azure Speech is not configured. Set AZURE_SPEECH_KEY (and optional AZURE_SPEECH_REGION / AZURE_SPEECH_VOICE) in .env.",
+    });
+  }
+  const parsed = ttsBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: "INVALID_BODY",
+      message: parsed.error.flatten().formErrors.join("; ") || "Invalid body",
+    });
+  }
+  const { text } = parsed.data;
+  try {
+    const buf = await synthesizeAzureSpeechToMp3({
+      text,
+      subscriptionKey: env.azureSpeechKey,
+      region: env.azureSpeechRegion,
+      voiceName: env.azureSpeechVoice,
+    });
+    return reply
+      .header("Content-Type", "audio/mpeg")
+      .header("Cache-Control", "private, max-age=86400")
+      .send(buf);
+  } catch (e) {
+    request.log.error(e);
+    return reply.status(502).send({
+      error: "TTS_UPSTREAM",
+      message: e instanceof Error ? e.message : "Speech synthesis failed",
     });
   }
 });

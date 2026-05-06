@@ -24,7 +24,8 @@ export function PromptEditorPanel({ levelIds }: Props) {
   const [saving, setSaving] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
 
-  const isL3 = levelId === "level3";
+  const hasPagedBookPrompt =
+    levelId === "level3" || levelId === "level4";
 
   useEffect(() => {
     if (!levelIds.length) {
@@ -57,7 +58,7 @@ export function PromptEditorPanel({ levelIds }: Props) {
       await savePromptSettings(levelId, {
         system,
         userTemplate,
-        ...(isL3
+        ...(hasPagedBookPrompt
           ? { referencePhases: { early, mid, late } }
           : {}),
       });
@@ -158,7 +159,7 @@ export function PromptEditorPanel({ levelIds }: Props) {
           spellCheck={false}
         />
 
-        {isL3 && (
+        {hasPagedBookPrompt && (
           <>
             <p className="field-label">三阶段参考文 · early (课 1–48) · 虚构</p>
             <textarea

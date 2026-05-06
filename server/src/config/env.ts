@@ -67,11 +67,109 @@ export const env = {
 
   /** Base URL for image API, e.g. https://api.getimg.ai/v2 (no trailing slash). */
   imageApiBaseUrl: (process.env.IMAGE_API_BASE_URL ?? "").replace(/\/$/, ""),
-  imageApiKey: process.env.IMAGE_API_KEY ?? "",
+  imageApiKey: (process.env.IMAGE_API_KEY ?? "").trim(),
   imageModel: process.env.IMAGE_MODEL ?? "seedream-5-0-lite",
   imageAspectRatio: process.env.IMAGE_ASPECT_RATIO ?? "4:3",
   imageResolution: process.env.IMAGE_RESOLUTION ?? "2K",
   imageOutputFormat: process.env.IMAGE_OUTPUT_FORMAT ?? "jpeg",
+
+  /**
+   * Volcengine Visual — Jimeng / Seedream async (CVSync2Async* on visual.volcengineapi.com).
+   * When VOLC_ACCESS_KEY and VOLC_SECRET_KEY are set, POST /api/images/generate uses this
+   * instead of IMAGE_API_BASE_URL + IMAGE_API_KEY (getimg-style).
+   * Aliases: VOLC_ACCESSKEY / VOLC_SECRETKEY (same names as @volcengine/openapi defaults).
+   */
+  volcAccessKey: (
+    process.env.VOLC_ACCESS_KEY ??
+    process.env.VOLC_ACCESSKEY ??
+    ""
+  ).trim(),
+  volcSecretKey: (
+    process.env.VOLC_SECRET_KEY ??
+    process.env.VOLC_SECRETKEY ??
+    ""
+  ).trim(),
+  volcRegion: (process.env.VOLC_REGION ?? "cn-north-1").trim(),
+  /** Visual capability key, e.g. jimeng_seedream46_cvtob (即梦图片生成 4.6). */
+  volcVisualReqKey: (
+    process.env.VOLC_VISUAL_REQ_KEY ?? "jimeng_seedream46_cvtob"
+  ).trim(),
+  volcImagePollIntervalMs: Math.max(
+    500,
+    Number(process.env.VOLC_IMAGE_POLL_INTERVAL_MS ?? 2500),
+  ),
+  /** Jimeng can exceed 3 minutes; default ~10.4 min at 2500 ms. */
+  volcImagePollMaxAttempts: Math.max(
+    1,
+    Math.floor(Number(process.env.VOLC_IMAGE_POLL_MAX_ATTEMPTS ?? 250)),
+  ),
+  /**
+   * After submitTask returns task_id, wait before the first GetResult.
+   * Tight polling right after submit sometimes yields Internal Error from Volc while status is still in_queue.
+   */
+  volcImageSubmitGraceMs: Math.max(
+    0,
+    Math.min(30_000, Number(process.env.VOLC_IMAGE_SUBMIT_GRACE_MS ?? 2_500)),
+  ),
+  /** For the first N GetResult polls, sleep at least this long between polls (unless max is higher). */
+  volcImageEarlyPollFloorMs: Math.max(
+    500,
+    Math.min(
+      60_000,
+      Number(process.env.VOLC_IMAGE_EARLY_POLL_FLOOR_MS ?? 4_000),
+    ),
+  ),
+  /** How many poll intervals use early floor (after attempt 0, attempts 1..N use max(interval, floor)). */
+  volcImageEarlyPollBoostCount: Math.max(
+    0,
+    Math.min(
+      120,
+      Math.floor(Number(process.env.VOLC_IMAGE_EARLY_POLL_BOOST_COUNT ?? 8)),
+    ),
+  ),
+  /**
+   * Stop polling after this many consecutive GetResult envelopes with code 50500 (data null).
+   * Many dozens of 50500 usually indicate region/req_key/account issues or prolonged Volc failure,
+   * not "wait longer".
+   */
+  volcGetResult50500MaxConsecutive: Math.max(
+    1,
+    Math.min(
+      120,
+      Math.floor(
+        Number(process.env.VOLC_GETRESULT_50500_MAX_CONSECUTIVE ?? 15),
+      ),
+    ),
+  ),
+  /**
+   * Soft cap for image `prompt` before Volc / getimg. Zod allows 20k, but Jimeng often
+   * returns generic Internal Error on long prompts; we truncate and keep the tail
+   * (page text, camera, instructions) in imageGenClient.
+   */
+  imagePromptMaxChars: Math.max(
+    2_000,
+    Math.min(20_000, Number(process.env.IMAGE_PROMPT_MAX_CHARS ?? 14_000)),
+  ),
+
+  /**
+   * Debug: when non-empty, POST /api/images/generate ignores client `prompt` and `referenceImageUrls`
+   * and uses only this string (e.g. `text: happy face`) to isolate Volc/Jimeng failures.
+   * Remove from .env when done.
+   */
+  illustrationDebugMinimalPrompt: (
+    process.env.ILLUSTRATION_DEBUG_MINIMAL_PROMPT ?? ""
+  ).trim(),
+
+  /**
+   * Azure AI Speech — Text-to-Speech (optional). Used by POST /api/speech/tts.
+   * Key must NOT be committed; set in .env only. Region e.g. eastus.
+   */
+  azureSpeechKey: process.env.AZURE_SPEECH_KEY ?? "",
+  azureSpeechRegion: (process.env.AZURE_SPEECH_REGION ?? "eastus").trim(),
+  /** Neural voice name, e.g. en-US-JennyNeural, en-US-AvaMultilingualNeural */
+  azureSpeechVoice: (
+    process.env.AZURE_SPEECH_VOICE ?? "en-US-JennyNeural"
+  ).trim(),
 };
 
 /**

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "sourceFile": "config/wordlists/Level-3_wordlist.xlsx (when available; sheet l3, Type = Mastery)",
+  "sheets": [
+    "l3"
+  ],
+  "tag": "Mastery",
+  "rowCountsMastery": {
+    "l3": 0
+  },
+  "uniqueLowercaseCount": 0,
+  "words": [],
+  "sourceNote": "Union of (optional) Level-3 sheet Mastery words and headwords from L3 lesson 定表词 exports (see scripts/build-mastery-l3-from-lesson-library.mjs). Level 4 dedupes against Union(this, mastery-words-l0-l2.json)."
+}

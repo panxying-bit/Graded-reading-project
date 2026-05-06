@@ -5,6 +5,8 @@ export const generateBodySchema = z.object({
   topic: z.string().optional(),
   /** Specific lesson title (e.g. from outline); optional. */
   lessonTitle: z.string().max(2000).optional(),
+  /** Optional outline of what the text should cover (any language). */
+  contentBrief: z.string().max(4000).optional(),
   wordCount: z.number().int().positive().max(10_000).optional(),
   /** 1..N — for level3 selects word/sentence band and reference passage. */
   lesson: z.number().int().min(1).max(500).optional(),
