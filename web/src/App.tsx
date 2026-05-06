@@ -94,6 +94,11 @@ import {
   APP_VERSION_SHORT,
   APP_VERSION_TAG,
 } from "./appVersion";
+import {
+  WorkflowTabBar,
+  WorkflowTabEmpty,
+  type WorkflowTabId,
+} from "./workflowTabs";
 
 export function App() {
   const [levels, setLevels] = useState<LevelItem[]>([]);
@@ -174,6 +179,8 @@ export function App() {
   const [illustrationPageDirsLive, setIllustrationPageDirsLive] = useState<
     Record<number, IllustrationPageDirection>
   >({});
+  /** Only one workflow region mounts at a time to cut React render cost. */
+  const [workflowTab, setWorkflowTab] = useState<WorkflowTabId>("compose");
 
   useEffect(() => {
     setIllustrationPageDirsLive({});
@@ -1199,6 +1206,18 @@ export function App() {
     }
   }
 
+  const illustrateReady =
+    Boolean(level) && isBookPipelineLevel(level) && Boolean(out) && !outEditing;
+
+  const languageLevelIds =
+    level === "level1" ||
+    level === "level2" ||
+    level === "level3" ||
+    level === "level4";
+
+  const languageReady =
+    Boolean(level) && languageLevelIds && Boolean(out) && !outEditing;
+
   return (
     <div className="app">
       <header className="head">
@@ -1262,6 +1281,12 @@ export function App() {
         </Fragment>
       )}
 
+      {levels.length > 0 && (
+        <WorkflowTabBar active={workflowTab} onChange={setWorkflowTab} />
+      )}
+
+      {workflowTab === "compose" && (
+        <>
       <form className="form" onSubmit={onSubmit}>
         <label className="row">
           <span>阅读级别</span>
@@ -1282,6 +1307,7 @@ export function App() {
               }
               setLevel(v);
               setLessonNum(1);
+              setWorkflowTab("compose");
               if (!isBookPipelineLevel(v)) {
                 setTopic("");
                 setLessonTitle("");
@@ -2198,105 +2224,114 @@ export function App() {
           )}
         </section>
       )}
+        </>
+      )}
 
-      {level &&
-        isBookPipelineLevel(level) &&
-        out &&
-        !outEditing && (
-          <BookIllustrationPrepPanel
-            levelId={level}
-            lessonSlot={lessonSlot}
-            finalBookText={out}
-            libVersion={libVersion}
-            onSaved={() => setLibVersion((v) => v + 1)}
-            illustrationPageDirectionsLive={illustrationPageDirsLive}
-          />
-        )}
+      {workflowTab === "illustrate" &&
+        (illustrateReady ? (
+          <>
+            <BookIllustrationPrepPanel
+              levelId={level}
+              lessonSlot={lessonSlot}
+              finalBookText={out!}
+              libVersion={libVersion}
+              onSaved={() => setLibVersion((v) => v + 1)}
+              illustrationPageDirectionsLive={illustrationPageDirsLive}
+            />
+            <BookIllustrationGeneratePanel
+              levelId={level}
+              lessonSlot={lessonSlot}
+              finalBookText={out!}
+              libVersion={libVersion}
+              onSaved={() => setLibVersion((v) => v + 1)}
+              onIllustrationPageDirectionsLive={onIllustrationPageDirectionsLive}
+            />
+          </>
+        ) : (
+          <WorkflowTabEmpty>
+            {!level ? (
+              <p>请先选择阅读级别。</p>
+            ) : !isBookPipelineLevel(level) ? (
+              <p>当前阅读级别不使用绘本配图工作台。</p>
+            ) : outEditing ? (
+              <p>
+                定稿正在在线编辑中，请先在本页第一个分区「生成与课文」里确认保存或取消，再使用配图。
+              </p>
+            ) : (
+              <p>
+                请先在「生成与课文」中完成生成与定稿（保存正文），再切换到本分区使用配图准备与生图。
+              </p>
+            )}
+          </WorkflowTabEmpty>
+        ))}
 
-      {level &&
-        isBookPipelineLevel(level) &&
-        out &&
-        !outEditing && (
-          <BookIllustrationGeneratePanel
-            levelId={level}
-            lessonSlot={lessonSlot}
-            finalBookText={out}
-            libVersion={libVersion}
-            onSaved={() => setLibVersion((v) => v + 1)}
-            onIllustrationPageDirectionsLive={onIllustrationPageDirectionsLive}
-          />
-        )}
-
-      {level &&
-        (level === "level1" ||
-          level === "level2" ||
-          level === "level3" ||
-          level === "level4") &&
-        out &&
-        !outEditing && (
-          <SentencePatternBlock
-            levelName={levels.find((l) => l.id === level)?.name ?? level}
-            outText={out}
-            pattern={sentencePattern}
-            patternError={patternError}
-            patternLoading={patternLoading}
-            patternNotes={patternNotes}
-            onPatternNotesChange={setPatternNotes}
-            onAnalyze={() => {
-              void runSentencePattern();
-            }}
-            disableAnalyze={patternLoading}
-          />
-        )}
-      {level &&
-        (level === "level1" ||
-          level === "level2" ||
-          level === "level3" ||
-          level === "level4") &&
-        out &&
-        !outEditing && (
-          <VocabCandidateBlock
-            levelName={levels.find((l) => l.id === level)?.name ?? level}
-            cefrLabel={
-              levels.find((l) => l.id === level)?.cefr ?? meta.cefr ?? ""
-            }
-            levelId={level}
-            isLevel3={isBookPipelineLevel(level)}
-            items={vocabCandidates}
-            error={vocabError}
-            loading={vocabLoading}
-            onRun={() => {
-              void runVocabCandidates();
-            }}
-            disableRun={vocabLoading}
-            excludedByPriorMastery={vocabExcludedByMastery}
-            priorMasteryFilterNote={vocabPriorMasteryNote}
-            excludedByOtherLessons={vocabExcludedByOtherLessons}
-            otherLessonsFilterNote={vocabOtherLessonsNote}
-          />
-        )}
-      {level &&
-        (level === "level1" ||
-          level === "level2" ||
-          level === "level3" ||
-          level === "level4") &&
-        out &&
-        !outEditing && (
-          <VocabFinalTableBlock
-            pool={vocabCandidates}
-            value={vocabFinal}
-            onChange={(rows) => {
-              setVocabFinal(rows);
-              persistVocabFinalTable(rows);
-            }}
-            disabled={loading || vocabLoading}
-            enableMasteryWordlistCheck={isBookPipelineLevel(level)}
-            masteryScope={level === "level4" ? "l0-l3" : "l0-l2"}
-            isLevel3={isBookPipelineLevel(level)}
-            maxRows={getVocabFinalMaxRows(level)}
-            levelId={level}
-          />
-        )}
+      {workflowTab === "language" &&
+        (languageReady ? (
+          <>
+            <SentencePatternBlock
+              levelName={levels.find((l) => l.id === level)?.name ?? level}
+              outText={out!}
+              pattern={sentencePattern}
+              patternError={patternError}
+              patternLoading={patternLoading}
+              patternNotes={patternNotes}
+              onPatternNotesChange={setPatternNotes}
+              onAnalyze={() => {
+                void runSentencePattern();
+              }}
+              disableAnalyze={patternLoading}
+            />
+            <VocabCandidateBlock
+              levelName={levels.find((l) => l.id === level)?.name ?? level}
+              cefrLabel={
+                levels.find((l) => l.id === level)?.cefr ?? meta.cefr ?? ""
+              }
+              levelId={level}
+              isLevel3={isBookPipelineLevel(level)}
+              items={vocabCandidates}
+              error={vocabError}
+              loading={vocabLoading}
+              onRun={() => {
+                void runVocabCandidates();
+              }}
+              disableRun={vocabLoading}
+              excludedByPriorMastery={vocabExcludedByMastery}
+              priorMasteryFilterNote={vocabPriorMasteryNote}
+              excludedByOtherLessons={vocabExcludedByOtherLessons}
+              otherLessonsFilterNote={vocabOtherLessonsNote}
+            />
+            <VocabFinalTableBlock
+              pool={vocabCandidates}
+              value={vocabFinal}
+              onChange={(rows) => {
+                setVocabFinal(rows);
+                persistVocabFinalTable(rows);
+              }}
+              disabled={loading || vocabLoading}
+              enableMasteryWordlistCheck={isBookPipelineLevel(level)}
+              masteryScope={level === "level4" ? "l0-l3" : "l0-l2"}
+              isLevel3={isBookPipelineLevel(level)}
+              maxRows={getVocabFinalMaxRows(level)}
+              levelId={level}
+            />
+          </>
+        ) : (
+          <WorkflowTabEmpty>
+            {!level ? (
+              <p>请先选择阅读级别。</p>
+            ) : !languageLevelIds ? (
+              <p>当前阅读级别不提供句型分析与词汇定表工作台。</p>
+            ) : outEditing ? (
+              <p>
+                正文正在编辑中，请先在「生成与课文」里确认保存或取消，再使用句型与词汇分区。
+              </p>
+            ) : (
+              <p>
+                请先在「生成与课文」中生成并保存课文正文，再切换到本分区分析句型与管理词汇。
+              </p>
+            )}
+          </WorkflowTabEmpty>
+        ))}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 {
   "name": "graded-reading-platform",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "private": true,
-  "description": "5.1 — 5.0 生图基线 + Volc GetResult/50500 轮询与诊断、TTS/词汇/配图等（存档便于回退）",
+  "description": "5.2 — 课文 / 图片 / 知识点 三模块工作台（Tab 单挂载，减轻渲染）",
   "scripts": {
     "llm:ping": "node server/scripts/llm-ping.mjs",
     "dev": "npm run dev:all",

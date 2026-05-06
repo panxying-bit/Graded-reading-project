@@ -1,8 +1,8 @@
 {
   "name": "graded-reading-server",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "private": true,
-  "description": "5.1 — Volc GetResult/50500 策略与日志；/api/images/generate + TTS/词汇等（与根目录同步）",
+  "description": "5.2 — 与根目录 5.2 同步（课文/图片/知识点三模块前端）",
   "type": "module",
   "engines": {
     "node": ">=18.11.0"
