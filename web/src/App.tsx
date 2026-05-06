@@ -367,103 +367,59 @@ export function App() {
     }
   }, [level]);
 
-  // Sync topic / lesson title / fiction mode from saved slot or curriculum outline.
+  // Single pass on lesson / outline change: one getLesson + batched sets (was 3 effects × parse).
   useEffect(() => {
     if (!level || !levels.length) {
       return;
     }
     const n = lessonSlot;
     const rec = getLesson(level, n);
+    const c = levels.find((l) => l.id === level);
+
+    setMeta({ level, cefr: c?.cefr });
     setContentBrief(rec?.contentBrief ?? "");
+
     if (levelHasLessonPlan(level) && !lessonPlan?.lessons?.length) {
       const savedTopic = rec?.topic?.trim() ?? "";
-      if (savedTopic) {
-        setTopic(savedTopic);
-      } else {
-        setTopic("");
-      }
+      setTopic(savedTopic || "");
       const savedLt = rec?.lessonTitle?.trim() ?? "";
-      if (savedLt) {
-        setLessonTitle(savedLt);
-      } else {
-        setLessonTitle("");
-      }
-      if (rec?.fictionOrNonfiction) {
-        setFictionOrNonfiction(rec.fictionOrNonfiction);
-      } else {
-        setFictionOrNonfiction("fiction");
-      }
-      return;
-    }
-    if (levelHasLessonPlan(level) && lessonPlan?.lessons?.length) {
+      setLessonTitle(savedLt || "");
+      setFictionOrNonfiction(rec?.fictionOrNonfiction ?? "fiction");
+    } else if (levelHasLessonPlan(level) && lessonPlan?.lessons?.length) {
       const row = findLessonPlanRow(lessonPlan.lessons, n);
       const savedTopic = rec?.topic?.trim() ?? "";
       const outlineTheme = row?.theme?.trim() ?? "";
-      if (savedTopic) {
-        setTopic(savedTopic);
-      } else if (outlineTheme) {
-        setTopic(outlineTheme);
-      } else {
-        setTopic("");
-      }
+      setTopic(savedTopic || outlineTheme || "");
       const savedLt = rec?.lessonTitle?.trim() ?? "";
       const outlineLt = row?.lessonTitle?.trim() ?? "";
-      if (savedLt) {
-        setLessonTitle(savedLt);
-      } else if (outlineLt) {
-        setLessonTitle(outlineLt);
-      } else {
-        setLessonTitle("");
-      }
-      if (rec?.fictionOrNonfiction) {
-        setFictionOrNonfiction(rec.fictionOrNonfiction);
-      } else if (row?.suggestedFictionOrNonfiction) {
-        setFictionOrNonfiction(row.suggestedFictionOrNonfiction);
-      } else {
-        setFictionOrNonfiction("fiction");
-      }
-      return;
-    }
-    if (rec?.topic) {
-      setTopic(rec.topic);
+      setLessonTitle(savedLt || outlineLt || "");
+      setFictionOrNonfiction(
+        rec?.fictionOrNonfiction ??
+          row?.suggestedFictionOrNonfiction ??
+          "fiction",
+      );
     } else {
-      setTopic("");
+      setTopic(rec?.topic ? rec.topic : "");
+      setLessonTitle("");
     }
-    // Non–level3: no lesson title field; keep state clean for API.
-    setLessonTitle("");
-  }, [level, lessonSlot, lessonPlan, lessonsPerLevel, levels.length]);
 
-  // Word count: L3/L4 follow lesson band; others use server defaultWordCount.
-  useEffect(() => {
-    if (!level || !levels.length) {
-      return;
-    }
     if (isBookPipelineLevel(level)) {
       if (level === "level1") {
-        setWordCount(getLevel1Band(lessonSlot).targetWords);
+        setWordCount(getLevel1Band(n).targetWords);
       } else if (level === "level2") {
-        setWordCount(getLevel2Band(lessonSlot).targetWords);
+        setWordCount(getLevel2Band(n).targetWords);
       } else {
         setWordCount(
-          getPagedBookBand(level as PagedBookLevelId, lessonSlot).targetWords,
+          getPagedBookBand(level as PagedBookLevelId, n).targetWords,
         );
       }
-      return;
+    } else {
+      const cfg = levels.find((l) => l.id === level);
+      if (cfg && typeof cfg.defaultWordCount === "number") {
+        setWordCount(cfg.defaultWordCount);
+      }
     }
-    const cfg = levels.find((l) => l.id === level);
-    if (cfg && typeof cfg.defaultWordCount === "number") {
-      setWordCount(cfg.defaultWordCount);
-    }
-  }, [level, levels, lessonSlot]);
 
-  // When user switches level / lesson, load that slot from the local library.
-  useEffect(() => {
-    if (!level || !levels.length) {
-      return;
-    }
-    const c = levels.find((l) => l.id === level);
-    setMeta({ level, cefr: c?.cefr });
-    const rec = getLesson(level, lessonSlot);
     setOut(rec?.text ?? null);
     setOutEditing(false);
     if (isBookPipelineLevel(level)) {
@@ -490,10 +446,16 @@ export function App() {
             .slice(0, getVocabFinalMaxRows(level))
         : [],
     );
-  }, [level, lessonSlot, levels]);
 
-  // Re-hydrate 句型 from localStorage after 分析保存 / 任意 save 引起的 libVersion 变化
-  // (wider than snap?.pattern so 例句 alone still restores; save 失败不 bump 时不会清掉已显示句型)
+    const snap = rec?.sentencePatternSnapshot;
+    if (snap && isUsableSentencePatternSnapshot(snap)) {
+      setSentencePattern(snap as unknown as SentencePatternResponse);
+    } else {
+      setSentencePattern(null);
+    }
+  }, [level, lessonSlot, lessonPlan, levels, lessonsPerLevel]);
+
+  // Re-hydrate 句型 after saves that bump libVersion only (slot sync is in the effect above).
   useEffect(() => {
     if (!level || !levels.length) {
       return;
@@ -505,7 +467,7 @@ export function App() {
     } else {
       setSentencePattern(null);
     }
-  }, [libVersion, level, lessonSlot, levels.length]);
+  }, [libVersion]); // eslint-disable-line react-hooks/exhaustive-deps -- only when save bumps libVersion; level/slot from render
 
   useEffect(() => {
     if (!isBookPipelineLevel(level)) {

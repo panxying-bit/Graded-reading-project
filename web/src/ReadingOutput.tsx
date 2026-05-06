@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { tryParseBookOutput, type BookOutput } from "./parseBookOutput";
 import { splitPlaybackSentences } from "./splitPlaybackSentences";
 import { TtsPlayButton } from "./TtsPlayButton";
@@ -100,7 +100,10 @@ function BookView({
   );
 }
 
-export function ReadingOutput({ text, highlightPhrase }: Props) {
+export const ReadingOutput = memo(function ReadingOutput({
+  text,
+  highlightPhrase,
+}: Props) {
   const book = tryParseBookOutput(text);
   if (book) {
     return <BookView book={book} highlightPhrase={highlightPhrase} />;
@@ -117,4 +120,4 @@ export function ReadingOutput({ text, highlightPhrase }: Props) {
       ))}
     </div>
   );
-}
+});

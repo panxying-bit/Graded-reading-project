@@ -414,6 +414,11 @@ export async function clearPromptSettings(levelId: string): Promise<void> {
 let ttsEnabledCache: boolean | null = null;
 let ttsEnabledPromise: Promise<boolean> | null = null;
 
+/** Sync peek after first `getTtsEnabled()` resolve — avoids per-button effects when switching lessons. */
+export function peekTtsEnabledCached(): boolean | null {
+  return ttsEnabledCache;
+}
+
 export async function getTtsEnabled(): Promise<boolean> {
   if (ttsEnabledCache !== null) {
     return ttsEnabledCache;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getTtsEnabled } from "./api/client";
+import { getTtsEnabled, peekTtsEnabledCached } from "./api/client";
 import { getOrFetchTtsUrl } from "./ttsAudioCache";
 
 type Props = {
@@ -16,13 +16,17 @@ export function TtsPlayButton({
   label = "听",
   disabled,
 }: Props) {
-  const [gateReady, setGateReady] = useState(false);
-  const [enabled, setEnabled] = useState(false);
+  const initialTts = peekTtsEnabledCached();
+  const [gateReady, setGateReady] = useState(initialTts !== null);
+  const [enabled, setEnabled] = useState(Boolean(initialTts));
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    if (initialTts !== null) {
+      return;
+    }
     let cancelled = false;
     void getTtsEnabled().then((ok) => {
       if (!cancelled) {
@@ -33,7 +37,7 @@ export function TtsPlayButton({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialTts]);
 
   useEffect(
     () => () => {

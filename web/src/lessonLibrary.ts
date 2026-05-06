@@ -307,23 +307,32 @@ function emptyStore(): StoreV1 {
   return { v: 1, byLevel: {} };
 }
 
+/** Parsed lesson library; avoids full JSON.parse on every getLesson during lesson switches. */
+let storeCache: StoreV1 | null = null;
+
 function readStore(): StoreV1 {
   if (typeof localStorage === "undefined") {
     return emptyStore();
   }
+  if (storeCache) {
+    return storeCache;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return emptyStore();
+      storeCache = emptyStore();
+      return storeCache;
     }
     const p = JSON.parse(raw) as StoreV1;
     if (p?.v === 1 && p.byLevel && typeof p.byLevel === "object") {
-      return p;
+      storeCache = p;
+      return storeCache;
     }
   } catch {
     // ignore
   }
-  return emptyStore();
+  storeCache = emptyStore();
+  return storeCache;
 }
 
 function writeStore(s: StoreV1): boolean {
@@ -332,9 +341,10 @@ function writeStore(s: StoreV1): boolean {
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    storeCache = s;
     return true;
   } catch {
-    // quota or private mode
+    storeCache = null;
     return false;
   }
 }

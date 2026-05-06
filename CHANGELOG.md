@@ -1,5 +1,21 @@
 # Changelog
 
+## 5.3.0 — 2026-05-07
+
+**切换课次流畅：减少本地库解析与 effect 重复、朗读按钮挂载成本。**
+
+- **`lessonLibrary`**：`readStore()` 内存缓存 + `writeStore` 后对齐缓存，避免每次 `getLesson` 整库 `JSON.parse`。
+- **`App`**：依赖课次的同步合并为单次 `getLesson` + 批量更新；句型快照仅在 `libVersion`（保存）变化时再补读。
+- **朗读**：`peekTtsEnabledCached()`，`TtsPlayButton` 在 TTS 开关已缓存时跳过探测用 `useEffect`。
+- **`ReadingOutput`**：`React.memo`，减轻无关父级渲染时的重复绘制。
+
+若使用 Git：`git tag -a v5.3.0 -m "5.3.0 切换课次流畅"`。
+
+### 版本号位置
+
+- 根目录 `package.json`、`server/package.json`、`web/package.json`：**5.3.0**
+- `web/src/appVersion.ts`：与上同步
+
 ## 5.2.0 — 2026-05-07
 
 **前端：课文、图片、知识点 三模块工作台（Tab 分区，单挂载）。**

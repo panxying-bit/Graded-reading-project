@@ -1,8 +1,8 @@
 {
   "name": "graded-reading-web",
-  "version": "5.2.0",
+  "version": "5.3.0",
   "private": true,
-  "description": "5.2 — 课文·图片·知识点三模块 Tab；单分区挂载",
+  "description": "5.3 — 课次切换流畅优化 + 继承 5.2 三模块 Tab",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,8 +1,8 @@
 {
   "name": "graded-reading-platform",
-  "version": "5.2.0",
+  "version": "5.3.0",
   "private": true,
-  "description": "5.2 — 课文 / 图片 / 知识点 三模块工作台（Tab 单挂载，减轻渲染）",
+  "description": "5.3 — 切换课次流畅（lessonLibrary 缓存、合并 slot effects、TTS 缓存感知、ReadingOutput memo）",
   "scripts": {
     "llm:ping": "node server/scripts/llm-ping.mjs",
     "dev": "npm run dev:all",
