@@ -30,6 +30,22 @@ const TEACHER_LEAD = `## Re-analysis — teacher is changing the target pattern
 
 **Teacher (binding):**`;
 
+function buildProvidedPatternLead(teacherText: string): string {
+  return `## Teacher-provided target pattern (MANDATORY)
+
+Skip open-ended "pick the most representative pattern" from the task. The teacher **already chose** the grammatical target.
+
+Rules:
+- Fill JSON field \`pattern\` from the teacher's text below: either **verbatim** if it is already an abstract scaffold (slots like **[subject]** / **[verb]**) **or** one short abstract line that preserves **exactly** the structure they want to teach (do **not** replace with a different grammar focus).
+- Scan the **entire** passage and set \`exampleSentence\` to **one sentence copied verbatim** from the passage that matches **this** pattern.
+- \`whyPattern\`: brief English note on how this pattern fits the passage.
+- \`variations\`: exactly **3** new sentences that use **this same teacher pattern**, same difficulty as the example, within the lesson CEFR band.
+
+**Teacher's target pattern:**
+
+${teacherText}`;
+}
+
 const TEACHER_TRAIL = `
 
 ---
@@ -45,16 +61,37 @@ export function buildSentencePatternUserMessage(
   passage: string,
   cefr: string,
   patternExtraInstructions?: string,
+  providedPatternStructure?: string,
 ): string {
   const tpl = getSentencePatternPromptTemplate();
   const base = tpl
     .replaceAll("{{cefr}}", cefr)
     .replaceAll("{{文章}}", passage);
   const note = patternExtraInstructions?.trim();
-  if (!note) {
+  const provided = providedPatternStructure?.trim();
+  if (!note && !provided) {
     return base;
   }
-  return `${TEACHER_LEAD}
+  const providedBlock = provided ? buildProvidedPatternLead(provided) : "";
+  if (provided && !note) {
+    return `${providedBlock}\n\n---\n\n${base}`;
+  }
+  if (!provided && note) {
+    return `${TEACHER_LEAD}
+${note}
+
+---
+
+${base}
+${TEACHER_TRAIL}
+${note}
+`;
+  }
+  return `${providedBlock}
+
+---
+
+${TEACHER_LEAD}
 ${note}
 
 ---

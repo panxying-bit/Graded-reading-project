@@ -16,6 +16,10 @@ Select items that are highly related to the main topic of the passage.
 
 Choose items at the target level or slightly above.
 
+## Singular headwords (nouns)
+
+For every **single-word noun** in `word`, output the **singular dictionary lemma** even if the passage uses the plural (e.g. passage "two **cats**…" → `word` **"cat"**; still copy the source line into `sentence` verbatim). This avoids duplicate teaching targets when the singular already appeared earlier. Exceptions: true plurale tantum or fixed chunks (e.g. **scissors**, **clothes**) stay as usually taught; multi-word **fixed phrases** stay as one unit (apply singular only when the natural teachable head is clearly one plural noun).
+
 ## Step 3: Classroom usability check
 
 - Do not select more than 2 **items** from the same sentence when you can avoid it.

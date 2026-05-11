@@ -22,6 +22,7 @@ export function getVocabCandidatePromptTemplate(): string {
 
 function formatExcludeHeadwordBlock(
   excludeHeadwords: string[] | undefined,
+  level: "level1" | "level2" | "level3" | "level4",
 ): string {
   if (!excludeHeadwords?.length) {
     return "No headwords are locked from other lessons (empty list). You may select any teachable items from the passage that follow the rules below.";
@@ -31,8 +32,12 @@ function formatExcludeHeadwordBlock(
     .filter(Boolean)
     .slice(0, 500)
     .map((w) => `- ${w}`);
+  const scope =
+    level === "level4"
+      ? "another lesson in **Level 4** or **any** lesson’s 定表词 in **Level 3**"
+      : "another lesson in this same level";
   return [
-    "The following `word` values (single lemmas **or** multi-word chunks) are **forbidden** — you must not include any of them in `candidates` (the teacher has already set them as 定表词 in another lesson in this same level). Match the **entire** string, case-insensitive:",
+    `The following \`word\` values (single lemmas **or** multi-word chunks) are **forbidden** — you must not include any of them in \`candidates\` (the teacher has already set them as 定表词 in ${scope}). Match the **entire** string, case-insensitive:`,
     "",
     ...lines,
   ].join("\n");
@@ -87,7 +92,10 @@ export function buildVocabCandidateUserMessage(
   return getVocabCandidatePromptTemplate()
     .replaceAll("{{cefr}}", cefr)
     .replaceAll("{{文章}}", passage)
-    .replaceAll("{{避免词表}}", formatExcludeHeadwordBlock(excludeHeadwords))
+    .replaceAll(
+      "{{避免词表}}",
+      formatExcludeHeadwordBlock(excludeHeadwords, level),
+    )
     .replaceAll("{{levelUnitRules}}", formatLevelUnitRules(level))
     .replaceAll("{{level4BandRules}}", formatLevel4BandRules(level));
 }

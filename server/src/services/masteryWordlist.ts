@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { resolveServerConfigFile } from "../utils/resolveConfigPath.js";
+import { canonicalVocabLemma } from "../utils/vocabHeadwordCanonical.js";
 
 type MasteryJson = {
   version: number;
@@ -20,7 +21,7 @@ function loadMasterySet(): Set<string> {
   );
   const data = JSON.parse(fs.readFileSync(p, "utf8")) as MasteryJson;
   cacheL0L2 = new Set(
-    (data.words ?? []).map((w) => w.toLowerCase().trim()).filter(Boolean),
+    (data.words ?? []).map((w) => canonicalVocabLemma(w)).filter(Boolean),
   );
   return cacheL0L2;
 }
@@ -32,7 +33,7 @@ function loadL3MasterySet(): Set<string> {
   const p = resolveServerConfigFile(import.meta.url, "mastery-words-l3.json");
   const data = JSON.parse(fs.readFileSync(p, "utf8")) as MasteryJson;
   cacheL3 = new Set(
-    (data.words ?? []).map((w) => w.toLowerCase().trim()).filter(Boolean),
+    (data.words ?? []).map((w) => canonicalVocabLemma(w)).filter(Boolean),
   );
   return cacheL3;
 }
@@ -51,7 +52,7 @@ export function isL0L2MasteryWord(lemma: string): boolean {
   if (!lemma.trim()) {
     return false;
   }
-  return loadMasterySet().has(lemma.toLowerCase().trim());
+  return loadMasterySet().has(canonicalVocabLemma(lemma));
 }
 
 /** True if the lemma appears in Level 3 Mastery list (config/mastery-words-l3.json). */
@@ -59,7 +60,7 @@ export function isL3MasteryWord(lemma: string): boolean {
   if (!lemma.trim()) {
     return false;
   }
-  return loadL3MasterySet().has(lemma.toLowerCase().trim());
+  return loadL3MasterySet().has(canonicalVocabLemma(lemma));
 }
 
 /** Level 4: headword matches any L0–L3 Mastery core word. */
@@ -67,8 +68,7 @@ export function isL0ThroughL3MasteryWord(lemma: string): boolean {
   if (!lemma.trim()) {
     return false;
   }
-  const n = lemma.toLowerCase().trim();
-  return loadL0ThroughL3MasterySet().has(n);
+  return loadL0ThroughL3MasterySet().has(canonicalVocabLemma(lemma));
 }
 
 export function filterLevel3CandidatesAgainstL0L2Mastery(
@@ -106,7 +106,7 @@ function filterByMasterySet(
     if (!w) {
       continue;
     }
-    if (set.has(w.toLowerCase().trim())) {
+    if (set.has(canonicalVocabLemma(w))) {
       removed.push(it);
     } else {
       kept.push(it);

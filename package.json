@@ -1,8 +1,8 @@
 {
   "name": "graded-reading-platform",
-  "version": "5.3.0",
+  "version": "5.4.0",
   "private": true,
-  "description": "5.3 — 切换课次流畅（lessonLibrary 缓存、合并 slot effects、TTS 缓存感知、ReadingOutput memo）",
+  "description": "5.4 — 单课生成稳定（构思选项、句型/词汇工作台、生图尺寸与 L4 定表去重）",
   "scripts": {
     "llm:ping": "node server/scripts/llm-ping.mjs",
     "dev": "npm run dev:all",

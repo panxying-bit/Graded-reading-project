@@ -30,9 +30,9 @@ export const ILLUSTRATION_HIGH_PIXEL_LABEL: Record<
   IllustrationLayoutId,
   string
 > = {
-  landscape_43: "2048 × 1536",
-  portrait_34: "1536 × 2048",
-  widescreen_169: "1920 × 1080",
+  landscape_43: "2304 × 1728",
+  portrait_34: "1728 × 2304",
+  widescreen_169: "2560 × 1440",
 };
 
 export const ILLUSTRATION_LAYOUT_OPTIONS: IllustrationLayoutOption[] = [
@@ -40,18 +40,18 @@ export const ILLUSTRATION_LAYOUT_OPTIONS: IllustrationLayoutOption[] = [
     id: "landscape_43",
     title: "A · 横版绘本",
     ratioLabel: "4:3",
-    standardPixels: "1024 × 768",
+    standardPixels: "1368 × 1026",
   },
   {
     id: "portrait_34",
     title: "B · 竖版绘本",
     ratioLabel: "3:4",
-    standardPixels: "768 × 1024",
+    standardPixels: "1026 × 1368",
   },
   {
     id: "widescreen_169",
     title: "C · 高清宽屏",
     ratioLabel: "16:9",
-    standardPixels: "1280 × 720",
+    standardPixels: "1920 × 1080",
   },
 ];

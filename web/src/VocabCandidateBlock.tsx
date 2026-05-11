@@ -64,7 +64,7 @@ export function VocabCandidateBlock({
         <h2>本课词汇·候选（第一、二步）</h2>
         <p className="sp-block-lead">
           根据定稿正文，从当前课中筛出 5–7 个可教词
-          {isLevel3 ? "或固定搭配短语" : ""}及原句。提示词由服务端{" "}
+          {isLevel3 ? "或固定搭配短语" : ""}及原句。单词类候选项由服务端在返回前<strong>尽量规范为单数词形</strong>（便于与他课定表、Mastery 去重时与文中已出现的单数对齐），短语保持固定说法。提示词由服务端{" "}
           <code className="sp-code">config/prompts/vocab-candidate-prompt.md</code>{" "}
           管理。
           {isLevel3 ? (
@@ -95,11 +95,19 @@ export function VocabCandidateBlock({
               （Level 1–2 不应用上述词表去重。）
             </>
           )}{" "}
-          本级别 <strong>其他课次</strong>若已保存「定表词」，其词头会随请求作为忌用名单，并在结果中<strong>硬性剔除</strong>（与
-          {isL4Mastery
-            ? " Level 4 的 L0–L3 Mastery"
-            : " Level 3 的 L0–L2 Mastery"}{" "}
-          去重并行，互不替代；整词或整段固定搭配都按全串匹配）。同一次「筛选候选词」中由提示词 + 规则双保险，无需再拆成第二步。
+          {isL4Mastery ? (
+            <>
+              <strong>Level 4</strong> 其他课次与<strong> Level 3 全部课次</strong>
+              若已保存「定表词」，其词头会一并并入忌用名单并在结果中<strong>硬性剔除</strong>
+              （与 Level 4 的 L0–L3 Mastery 去重并行；整词或固定搭配按规范化后的全串匹配）。
+            </>
+          ) : (
+            <>
+              本级别 <strong>其他课次</strong>若已保存「定表词」，其词头会随请求作为忌用名单，并在结果中<strong>硬性剔除</strong>
+              （与 Level 3 的 L0–L2 Mastery 去重并行，互不替代；整词或整段固定搭配都按全串匹配）。
+            </>
+          )}
+          同一次「筛选候选词」中由提示词 + 规则双保险，无需再拆成第二步。
           {isLevel3 ? (
             <>
               {" "}

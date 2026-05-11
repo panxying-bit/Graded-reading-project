@@ -16,21 +16,25 @@ export const ILLUSTRATION_QUALITY_TIERS = ["standard", "high"] as const;
 export type IllustrationQualityTier =
   (typeof ILLUSTRATION_QUALITY_TIERS)[number];
 
+// Vendor accepts 2K presets like 2304×1728 (4:3), 2560×1440 (16:9), etc.
+// Do not send any side below 1024 — short edges caused API rejections.
+// Standard 4:3 / 3:4: smallest k with min(3k,4k)>=1024 is k=342 → 1368×1026 / 1026×1368.
+
 const DIMS: Record<
   IllustrationLayoutId,
   { standard: { w: number; h: number }; high: { w: number; h: number } }
 > = {
   landscape_43: {
-    standard: { w: 1024, h: 768 },
-    high: { w: 2048, h: 1536 },
+    standard: { w: 1368, h: 1026 },
+    high: { w: 2304, h: 1728 },
   },
   portrait_34: {
-    standard: { w: 768, h: 1024 },
-    high: { w: 1536, h: 2048 },
+    standard: { w: 1026, h: 1368 },
+    high: { w: 1728, h: 2304 },
   },
   widescreen_169: {
-    standard: { w: 1280, h: 720 },
-    high: { w: 1920, h: 1080 },
+    standard: { w: 1920, h: 1080 },
+    high: { w: 2560, h: 1440 },
   },
 };
 

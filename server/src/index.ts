@@ -45,6 +45,10 @@ import {
 import { imageGenerateBodySchema } from "./schemas/imageGenerateBody.js";
 import { getLessonPlan } from "./services/lessonCurriculum.js";
 import {
+  contentBriefIdeasBodySchema,
+  contentBriefIdeasResponseSchema,
+} from "./schemas/contentBriefIdeasBody.js";
+import {
   sentencePatternBodySchema,
   sentencePatternResultSchema,
 } from "./schemas/sentencePatternBody.js";
@@ -52,6 +56,7 @@ import {
   vocabCandidateBodySchema,
   vocabCandidateResponseSchema,
 } from "./schemas/vocabCandidateBody.js";
+import { buildContentBriefIdeasUserMessage } from "./services/contentBriefIdeasLoader.js";
 import { buildSentencePatternUserMessage } from "./services/sentencePatternLoader.js";
 import { buildVocabCandidateUserMessage } from "./services/vocabCandidateLoader.js";
 import {
@@ -60,6 +65,7 @@ import {
 } from "./services/masteryWordlist.js";
 import { filterCandidatesAgainstExcludeHeadwords } from "./services/vocabCandidateExclude.js";
 import { extractPassageTextForPattern } from "./utils/extractPassageText.js";
+import { canonicalVocabLemma } from "./utils/vocabHeadwordCanonical.js";
 import { ttsBodySchema } from "./schemas/ttsBody.js";
 import { synthesizeAzureSpeechToMp3 } from "./services/azureSpeechTts.js";
 import {
@@ -110,6 +116,8 @@ app.get("/", async () => ({
       "GET /api/images/enabled (IMAGE_API_BASE_URL + IMAGE_API_KEY configured?)",
     "sentence-pattern":
       "POST /api/learning/sentence-pattern (定稿/课文句型+例句+变体; prompt: config/sentence-pattern-prompt.md)",
+    "content-brief-ideas":
+      "POST /api/learning/content-brief-ideas (AI 文本内容构思选项 list; prompt: config/content-brief-ideas-prompt.md)",
     "vocab-candidates":
       "POST /api/learning/vocab-candidates (定稿备选词; prompt: config/prompts/vocab-candidate-prompt.md)",
     "prompts-get-put": "GET|PUT|DELETE /api/prompts/:levelId",
@@ -628,6 +636,117 @@ app.post<{
   }
 });
 
+/** Optional: AI-generated Chinese outline ideas for the content brief field (teacher picks or edits). */
+app.post<{
+  Body: unknown;
+}>("/api/learning/content-brief-ideas", async (request, reply) => {
+  const parsed = contentBriefIdeasBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: "INVALID_BODY",
+      message: parsed.error.flatten().formErrors.join("; ") || "Invalid body",
+    });
+  }
+  const body = parsed.data;
+  const def = getLevel(body.level);
+  if (!def) {
+    return reply.status(400).send({
+      error: "INVALID_LEVEL",
+      message: `Unknown level: ${body.level}`,
+    });
+  }
+  const cefr = def.cefr ?? "A1";
+  const levelLabel = def.name ?? body.level;
+  const topic = body.topic?.trim() ?? "";
+  const lessonTitle = body.lessonTitle?.trim() ?? "";
+  const fic = body.fictionOrNonfiction ?? "fiction";
+  const structureType = body.structureType?.trim() || "(not specified)";
+  const genre = body.genreFocus?.trim();
+  const tense = body.tenseFocus?.trim();
+  const lessonLine =
+    body.lesson != null
+      ? `- Lesson slot (1-based index in course): **${body.lesson}**`
+      : "- Lesson slot: (not specified)";
+  const genreLine = genre
+    ? `- Genre / form focus: **${genre}**`
+    : "";
+  const tenseLine = tense
+    ? `- Tense / grammar focus: **${tense}**`
+    : "";
+  const userContent = buildContentBriefIdeasUserMessage({
+    levelLabel,
+    cefr,
+    lessonLine,
+    topic: topic || "(empty)",
+    lessonTitle: lessonTitle || "(empty)",
+    fictionOrNonfiction: fic,
+    structureType,
+    genreLine,
+    tenseLine,
+    countMin: 5,
+    countMax: 7,
+  });
+  const system: ChatMessage = {
+    role: "system",
+    content:
+      "You help teachers plan graded English readers. Follow the user instructions exactly. Reply with one valid JSON object only, key \"ideas\" (array of strings), no markdown code fences, no extra keys.",
+  };
+  const user: ChatMessage = { role: "user", content: userContent };
+  const messages: ChatMessage[] = [system, user];
+  let raw: string;
+  try {
+    try {
+      raw = await callChatCompletions(messages, {
+        temperature: 0.65,
+        responseFormat: { type: "json_object" },
+      });
+    } catch (e) {
+      if (e instanceof LlmError && e.statusCode === 400) {
+        request.log.warn(
+          "content-brief-ideas: retrying without response_format (provider may not support json_object mode)",
+        );
+        raw = await callChatCompletions(messages, { temperature: 0.65 });
+      } else {
+        throw e;
+      }
+    }
+  } catch (e) {
+    if (e instanceof LlmError) {
+      return reply.status(e.statusCode).send({
+        error: e.code,
+        message: e.message,
+      });
+    }
+    request.log.error(e);
+    return reply.status(500).send({
+      error: "INTERNAL",
+      message: formatInternalCatchMessage(e),
+    });
+  }
+  const stripped = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  let data: unknown;
+  try {
+    data = JSON.parse(stripped) as unknown;
+  } catch {
+    return reply.status(502).send({
+      error: "INVALID_JSON",
+      message: "Model did not return valid JSON for content brief ideas.",
+    });
+  }
+  const out = contentBriefIdeasResponseSchema.safeParse(data);
+  if (!out.success) {
+    return reply.status(502).send({
+      error: "SCHEMA",
+      message: out.error.message,
+    });
+  }
+  return { ideas: out.data.ideas };
+});
+
 /** After final text: one core pattern, exemplar in text, variations, teaching focus. Prompt: server/config/sentence-pattern-prompt.md */
 app.post<{
   Body: unknown;
@@ -639,7 +758,8 @@ app.post<{
       message: parsed.error.flatten().formErrors.join("; ") || "Invalid body",
     });
   }
-  const { level, text, patternExtraInstructions } = parsed.data;
+  const { level, text, patternExtraInstructions, providedPatternStructure } =
+    parsed.data;
   const def = getLevel(level);
   if (!def) {
     return reply.status(400).send({
@@ -656,11 +776,16 @@ app.post<{
     });
   }
   const hasTeacherNote = Boolean(patternExtraInstructions?.trim());
-  const spTemperature = hasTeacherNote ? 0.55 : 0.35;
+  const hasProvidedPattern = Boolean(providedPatternStructure?.trim());
+  const spTemperature =
+    hasTeacherNote || hasProvidedPattern ? 0.55 : 0.35;
   const system: ChatMessage = {
     role: "system",
     content:
       "You are an expert in English for young and teenage learners. Follow the user instructions exactly. Reply with a single valid JSON object only, no markdown code fences, no extra keys." +
+      (hasProvidedPattern
+        ? " When Teacher-provided target pattern appears first in the user message, that pattern is mandatory for the JSON pattern field."
+        : "") +
       (hasTeacherNote
         ? " When a teacher re-analysis block is present, it overrides a generic choice: search the full passage, select pattern and example to satisfy the teacher, not only the first part of the text."
         : ""),
@@ -671,6 +796,7 @@ app.post<{
       passage,
       cefr,
       patternExtraInstructions,
+      providedPatternStructure,
     ),
   };
   const messages: ChatMessage[] = [system, user];
@@ -828,7 +954,10 @@ app.post<{
       message: out.error.message,
     });
   }
-  let candidates = out.data.candidates;
+  let candidates = out.data.candidates.map((c) => ({
+    ...c,
+    word: canonicalVocabLemma(c.word),
+  }));
   let excludedByPriorMastery: { word: string; sentence: string }[] | undefined;
   let priorMasteryFilterNote: string | undefined;
   if (level === "level3") {

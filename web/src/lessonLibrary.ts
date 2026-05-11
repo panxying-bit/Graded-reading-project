@@ -15,6 +15,8 @@ import type {
   IllustrationLayoutId,
   IllustrationQualityTier,
 } from "./data/illustrationOutputPresets";
+import { canonicalVocabLemma } from "./vocabHeadwordCanonical";
+
 const STORAGE_KEY = "graded-reading.lessonLibrary.v1";
 
 /** One row in the user-curated final vocabulary table (cap 6 for L1/L2, 4 for L3/L4). */
@@ -381,7 +383,7 @@ export function isUsableSentencePatternSnapshot(
 
 /** Normalize headword for vocabulary de-duplication (UI + API). */
 export function normVocabHeadword(w: string): string {
-  return w.trim().toLowerCase();
+  return canonicalVocabLemma(w);
 }
 
 /**
@@ -400,6 +402,32 @@ export function collectFinalVocabHeadwordsFromOtherLessons(
     if (n === currentLesson) {
       continue;
     }
+    const rec = getLesson(levelId, n);
+    const items = rec?.vocabFinalTable?.items;
+    if (!items?.length) {
+      continue;
+    }
+    for (const row of items) {
+      const h = normVocabHeadword(row.word ?? "");
+      if (h) {
+        set.add(h);
+      }
+    }
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, "en"));
+}
+
+/**
+ * All normalized headwords from every lesson slot's 定表 in one level (no skip).
+ * Used e.g. to exclude Level 3 teaching targets when picking Level 4 candidates.
+ */
+export function collectFinalVocabHeadwordsFromAllLessons(
+  levelId: string,
+  maxLesson: number,
+): string[] {
+  const set = new Set<string>();
+  const cap = Math.max(0, Math.min(maxLesson, 2000));
+  for (let n = 1; n <= cap; n++) {
     const rec = getLesson(levelId, n);
     const items = rec?.vocabFinalTable?.items;
     if (!items?.length) {

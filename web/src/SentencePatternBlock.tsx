@@ -8,6 +8,9 @@ type Props = {
   pattern: SentencePatternResponse | null;
   patternError: string | null;
   patternLoading: boolean;
+  /** Optional: teacher already knows the pattern — skip discovery, match example + variants to this. */
+  patternProvidedStructure: string;
+  onPatternProvidedStructureChange: (v: string) => void;
   patternNotes: string;
   onPatternNotesChange: (v: string) => void;
   onAnalyze: () => void;
@@ -23,22 +26,57 @@ export function SentencePatternBlock({
   pattern,
   patternError,
   patternLoading,
+  patternProvidedStructure,
+  onPatternProvidedStructureChange,
   patternNotes,
   onPatternNotesChange,
   onAnalyze,
   disableAnalyze,
 }: Props) {
   const hasNotes = patternNotes.trim().length > 0;
-  const reanalyzeLabel = hasNotes ? "按说明重新分析" : "重新分析句型";
+  const hasProvided = patternProvidedStructure.trim().length > 0;
+  const reanalyzeLabel = hasProvided
+    ? "按指定句型分析"
+    : hasNotes
+      ? "按说明重新分析"
+      : "重新分析句型";
+  const analyzeLabelHasProvided = patternLoading
+    ? "分析中…"
+    : hasProvided
+      ? "按指定句型分析句型与例句"
+      : "分析句型与例句";
   return (
     <section className="out sp-block" aria-label="句型与例句">
       <div className="out-head sp-block-head">
         <h2>本课句型与例句</h2>
         <p className="sp-block-lead">
           在定稿正文中选出一个核心可替换句型、对应例句，并生成 3
-          条同难度变体，便于学生操练。分析依据见服务端{" "}
+          条同难度变体，便于学生操练。若你已明确要练的句式，可先填写<strong>指定句型</strong>，
+          AI 将按你的描述从文中找例句与变体而不另选句型。分析依据见服务端{" "}
           <code className="sp-code">config/sentence-pattern-prompt.md</code>。
         </p>
+      </div>
+      <div className="sp-notes-wrap">
+        <label className="sp-notes-label" htmlFor="sp-provided-structure">
+          指定句型（选填）
+        </label>
+        <p className="sp-notes-hint" id="sp-provided-structure-hint">
+          中英文均可；可写抽象结构（如 <span lang="en">[Someone] likes [something].</span>）或简述要操练的句式。填空则仍由
+          AI 从文中自动识别一句型。
+        </p>
+        <textarea
+          id="sp-provided-structure"
+          className="sp-notes-ta"
+          value={patternProvidedStructure}
+          onChange={(e) => {
+            onPatternProvidedStructureChange(e.target.value);
+          }}
+          rows={2}
+          placeholder='例：[人物] likes [实物]. / 操练 "There is …" / 第三人称陈述'
+          spellCheck={true}
+          disabled={disableAnalyze || patternLoading}
+          aria-describedby="sp-provided-structure-hint"
+        />
       </div>
       {patternError && (
         <p className="err" role="alert">
@@ -52,9 +90,13 @@ export function SentencePatternBlock({
             type="button"
             onClick={onAnalyze}
             disabled={disableAnalyze || patternLoading}
-            title="从定稿中首次抽取句型与变体"
+            title={
+              hasProvided
+                ? "按指定句型从定稿中找例句与变体"
+                : "从定稿中首次抽取句型与变体"
+            }
           >
-            {patternLoading ? "分析中…" : "分析句型与例句"}
+            {analyzeLabelHasProvided}
           </button>
         </div>
       )}
@@ -141,7 +183,11 @@ export function SentencePatternBlock({
               type="button"
               onClick={onAnalyze}
               disabled={disableAnalyze || patternLoading}
-              title="按说明重新挑选句型；不填说明则仅按默认标准再分析一次"
+              title={
+                hasProvided
+                  ? "已填指定句型：按此行从全文重新找例句与变体（可选填修改说明微调例句出处）"
+                  : "按说明重新挑选句型；不填说明则仅按默认标准再分析一次"
+              }
             >
               {patternLoading ? "分析中…" : reanalyzeLabel}
             </button>

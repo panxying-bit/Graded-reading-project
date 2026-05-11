@@ -4,6 +4,8 @@
   Optional: request handler may append a "Teacher instructions" block after
   the passage (when the UI sends 句型修改说明) so the model re-picks a pattern.
 -->
+If the **user message begins** with a Markdown section titled **Teacher-provided target pattern**, that section is **binding**: use it as the JSON `pattern` target and pick `exampleSentence` from the passage that matches it — do **not** replace it with a different “best” pattern.
+
 Task: Identify the core sentence pattern from the passage for young English learners.
 
 Target CEFR band (do not exceed this difficulty in variations): **{{cefr}}**

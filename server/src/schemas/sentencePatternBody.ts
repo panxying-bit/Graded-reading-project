@@ -9,6 +9,11 @@ export const sentencePatternBodySchema = z.object({
   text: z.string().min(1).max(500_000),
   /** Optional; teacher says what was wrong with the last pick and how to re-choose. */
   patternExtraInstructions: z.string().max(4000).optional(),
+  /**
+   * When set: skip open-ended pattern discovery — use this as the JSON `pattern`
+   * (verbatim or equivalent abstract slots) and pick example + variations for it only.
+   */
+  providedPatternStructure: z.string().max(4000).optional(),
 });
 
 export type SentencePatternBody = z.infer<typeof sentencePatternBodySchema>;

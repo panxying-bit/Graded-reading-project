@@ -1,8 +1,8 @@
 {
   "name": "graded-reading-web",
-  "version": "5.3.0",
+  "version": "5.4.0",
   "private": true,
-  "description": "5.3 — 课次切换流畅优化 + 继承 5.2 三模块 Tab",
+  "description": "5.4 — 单课生成稳定 + 继承 5.3 课次切换优化",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "jszip": "^3.10.1",
+    "pluralize": "^8.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/pluralize": "^0.0.33",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",

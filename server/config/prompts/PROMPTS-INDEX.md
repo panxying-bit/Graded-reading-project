@@ -23,7 +23,7 @@
 
 | 位置 | 内容 |
 |------|------|
-| `server/config/prompts/vocab-candidate-prompt.md` | 从选段中筛 **5–7** 个可教词 + 原句；占位 `{{cefr}}`、`{{文章}}`。**API**: `POST /api/learning/vocab-candidates`（返回 `candidates`；**Level 3** 可能返回与 **L0–L2** Mastery 去重；**Level 4** 与 **L0–3** Mastery 去重）。**定表**（第三步）每课仍 **最多 4 个** 词/搭配，与 Level 3 相同。 |
+| `server/config/prompts/vocab-candidate-prompt.md` | 从选段中筛 **5–7** 个可教词 + 原句；占位 `{{cefr}}`、`{{文章}}`。**API**: `POST /api/learning/vocab-candidates`（返回 `candidates`；**Level 3** 可能返回与 **L0–L2** Mastery 去重；**Level 4** 与 **L0–3** Mastery 去重）。**前端**在 Level 4 会把 **Level 3 全部课次的已定表词**与本级别他课定表一并写入 `excludeHeadwords`。**定表**（第三步）每课仍 **最多 4 个** 词/搭配，与 Level 3 相同。 |
 | `server/config/mastery-words-l0-l2.json` | 自 `config/wordlists/Level-0-Level-2_wordlist.xlsx` 的 **l0 / l1 / l2** 表中 **Type = Mastery** 汇总（561 不重复小写词）。**Level 3** 词汇候选用此与 **headword 精确**去重。重生成： `python3 server/scripts/build_mastery_wordlist.py`（需 openpyxl）。 |
 | `server/config/mastery-words-l3.json` | **Level 3** 段 Mastery 核心词（小写不重复）。与 `mastery-words-l0-l2.json` **并集** 用于 **Level 4** 词汇候选去重。**可由本机已保存的 L3「定表词」汇总生成**：浏览器复制 Local Storage 键 `graded-reading.lessonLibrary.v1` 到 JSON 文件后执行 `cd server && npm run build:mastery-l3 -- /绝对或相对路径/export.json`（见 `scripts/build-mastery-l3-from-lesson-library.mjs`）。亦可后续接 Excel 正式词表合并到同一文件。 |
 

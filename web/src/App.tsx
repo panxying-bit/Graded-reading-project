@@ -55,6 +55,7 @@ import {
   type PagedBookLevelId,
 } from "./bookPhase";
 import {
+  collectFinalVocabHeadwordsFromAllLessons,
   collectFinalVocabHeadwordsFromOtherLessons,
   getLesson,
   isUsableSentencePatternSnapshot,
@@ -71,6 +72,7 @@ import {
 import { LessonDownloadPanel } from "./LessonDownloadPanel";
 import { LessonPanel } from "./LessonPanel";
 import { PromptEditorPanel } from "./PromptEditorPanel";
+import { ContentBriefIdeasBlock } from "./ContentBriefIdeasBlock";
 import { BookDraftEditor } from "./BookDraftEditor";
 import { ReadingOutput } from "./ReadingOutput";
 import { SentencePatternBlock } from "./SentencePatternBlock";
@@ -144,6 +146,9 @@ export function App() {
   const [patternError, setPatternError] = useState<string | null>(null);
   /** Optional notes when re-running sentence-pattern (like 初稿修改说明). */
   const [patternNotes, setPatternNotes] = useState("");
+  /** Optional: teacher already knows pattern — constrain LLM pick (L1–L4). */
+  const [patternProvidedStructure, setPatternProvidedStructure] =
+    useState("");
   /** Step-1 LLM vocabulary candidates (not persisted; step 2 = de-dup). */
   const [vocabCandidates, setVocabCandidates] = useState<
     VocabCandidateItem[] | null
@@ -432,6 +437,7 @@ export function App() {
     }
     setPatternError(null);
     setPatternNotes("");
+    setPatternProvidedStructure("");
     setVocabCandidates(null);
     setVocabError(null);
     setVocabExcludedByMastery(null);
@@ -789,10 +795,12 @@ export function App() {
     setPatternLoading(true);
     try {
       const note = patternNotes.trim();
+      const provided = patternProvidedStructure.trim();
       const r = await analyzeSentencePattern({
         level,
         text: t,
         ...(note ? { patternExtraInstructions: note } : {}),
+        ...(provided ? { providedPatternStructure: provided } : {}),
       });
       setSentencePattern(r);
       const w = countWordsInModelOutput(t);
@@ -860,11 +868,23 @@ export function App() {
     setVocabError(null);
     setVocabLoading(true);
     try {
-      const priorHeadwords = collectFinalVocabHeadwordsFromOtherLessons(
+      let priorHeadwords = collectFinalVocabHeadwordsFromOtherLessons(
         level,
         lessonSlot,
         lessonsPerLevel,
       );
+      if (level === "level4") {
+        const l3Slots =
+          levels.find((x) => x.id === "level3")?.lessonsPerLevel ??
+          lessonsPerLevel;
+        const l3Headwords = collectFinalVocabHeadwordsFromAllLessons(
+          "level3",
+          l3Slots,
+        );
+        priorHeadwords = [
+          ...new Set([...priorHeadwords, ...l3Headwords]),
+        ].sort((a, b) => a.localeCompare(b, "en"));
+      }
       const r = await fetchVocabCandidates({
         level,
         text: t,
@@ -880,7 +900,9 @@ export function App() {
       setVocabExcludedByOtherLessons(removed.length > 0 ? removed : null);
       setVocabOtherLessonsNote(
         removed.length > 0
-          ? `已剔除 ${removed.length} 个与本级别其他课已保存「定表词」重名的候选项；当前保留 ${kept.length} 个。`
+          ? level === "level4"
+            ? `已剔除 ${removed.length} 个与 Level 4 其他课或 Level 3 已定表词重名的候选项；当前保留 ${kept.length} 个。`
+            : `已剔除 ${removed.length} 个与本级别其他课已保存「定表词」重名的候选项；当前保留 ${kept.length} 个。`
           : null,
       );
     } catch (e) {
@@ -1307,17 +1329,21 @@ export function App() {
         </label>
 
         {!isBookPipelineLevel(level) && (
-          <label className="row">
-            <span>文本内容构思（选填）</span>
-            <textarea
-              value={contentBrief}
-              onChange={(e) => setContentBrief(e.target.value)}
-              placeholder="用几句话说明本篇大致写什么、关键情节或知识点；可不填。填写后会一并传给生成模型作参考。"
-              rows={3}
-              autoComplete="off"
-              spellCheck={true}
-            />
-          </label>
+          <ContentBriefIdeasBlock
+            value={contentBrief}
+            onChange={setContentBrief}
+            disabled={loading || !levels.length}
+            context={{
+              level,
+              topic,
+              lessonTitle: curriculumLessonTitle?.trim() ?? "",
+              lesson: lessonSlot,
+              fictionOrNonfiction,
+              structureType,
+              genreFocus,
+              tenseFocus,
+            }}
+          />
         )}
 
         {isBookPipelineLevel(level) && (
@@ -1359,17 +1385,21 @@ export function App() {
         )}
 
         {isBookPipelineLevel(level) && (
-          <label className="row">
-            <span>文本内容构思（选填）</span>
-            <textarea
-              value={contentBrief}
-              onChange={(e) => setContentBrief(e.target.value)}
-              placeholder="用几句话说明本篇大致写什么、关键情节或知识点；可不填。填写后会一并传给生成模型作参考。"
-              rows={3}
-              autoComplete="off"
-              spellCheck={true}
-            />
-          </label>
+          <ContentBriefIdeasBlock
+            value={contentBrief}
+            onChange={setContentBrief}
+            disabled={loading || !levels.length}
+            context={{
+              level,
+              topic,
+              lessonTitle,
+              lesson: lessonSlot,
+              fictionOrNonfiction,
+              structureType,
+              genreFocus,
+              tenseFocus,
+            }}
+          />
         )}
 
         {levelHasLessonPlan(level) && lessonPlan && (
@@ -1832,7 +1862,7 @@ export function App() {
             </div>
           ) : l3Draft ? (
             <div className="text-block">
-              <ReadingOutput text={l3Draft} />
+              <ReadingOutput text={l3Draft} showTts={false} />
             </div>
           ) : (
             <p className="out-placeholder">
@@ -1959,7 +1989,7 @@ export function App() {
             </div>
           ) : l3Refined ? (
             <div className="text-block">
-              <ReadingOutput text={l3Refined} />
+              <ReadingOutput text={l3Refined} showTts={false} />
             </div>
           ) : (
             <p className="out-placeholder">
@@ -2236,6 +2266,8 @@ export function App() {
               pattern={sentencePattern}
               patternError={patternError}
               patternLoading={patternLoading}
+              patternProvidedStructure={patternProvidedStructure}
+              onPatternProvidedStructureChange={setPatternProvidedStructure}
               patternNotes={patternNotes}
               onPatternNotesChange={setPatternNotes}
               onAnalyze={() => {

@@ -269,11 +269,40 @@ export type SentencePatternResponse = {
   teachingFocus: string;
 };
 
+/** AI outline ideas for the optional content brief (Chinese); teacher picks then edits. */
+export async function fetchContentBriefIdeas(body: {
+  level: "level1" | "level2" | "level3" | "level4";
+  topic?: string;
+  lessonTitle?: string;
+  lesson?: number;
+  fictionOrNonfiction?: "fiction" | "nonfiction";
+  structureType?: string;
+  genreFocus?: string;
+  tenseFocus?: string;
+}): Promise<{ ideas: string[] }> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/api/learning/content-brief-ideas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw mapNetworkError(e, "构思选项生成");
+  }
+  if (!res.ok) {
+    throw new Error(await readApiErrorMessage(res));
+  }
+  return (await res.json()) as { ideas: string[] };
+}
+
 export async function analyzeSentencePattern(body: {
   level: "level1" | "level2" | "level3" | "level4";
   text: string;
   /** 句型修改说明：对 AI 上一条结果不满意时填写，再重新分析。 */
   patternExtraInstructions?: string;
+  /** 已知的句型骨架：跳过后台“自由识别”，只从文中找匹配的例句与变体。 */
+  providedPatternStructure?: string;
 }): Promise<SentencePatternResponse> {
   let res: Response;
   try {

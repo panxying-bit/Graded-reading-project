@@ -7,6 +7,8 @@ type Props = {
   text: string;
   /** If set, first match in each segment is wrapped in <mark> (e.g. sentence-pattern exemplar). */
   highlightPhrase?: string | null;
+  /** Per-sentence TTS; false for draft/refined previews — only final 定稿 should offer 听 (all levels). */
+  showTts?: boolean;
 };
 
 function findHighlightSpan(
@@ -56,9 +58,11 @@ function textWithOptionalHighlight(
 function BookView({
   book,
   highlightPhrase,
+  showTts,
 }: {
   book: BookOutput;
   highlightPhrase?: string | null;
+  showTts: boolean;
 }) {
   const sorted = [...book.pages].sort((a, b) => a.page - b.page);
   return (
@@ -85,7 +89,7 @@ function BookView({
                     <span className="book-sentence-text" lang="en">
                       {textWithOptionalHighlight(sent, highlightPhrase)}
                     </span>
-                    <TtsPlayButton text={sent} />
+                    {showTts ? <TtsPlayButton text={sent} /> : null}
                   </div>
                 ))}
               </div>
@@ -103,10 +107,17 @@ function BookView({
 export const ReadingOutput = memo(function ReadingOutput({
   text,
   highlightPhrase,
+  showTts = true,
 }: Props) {
   const book = tryParseBookOutput(text);
   if (book) {
-    return <BookView book={book} highlightPhrase={highlightPhrase} />;
+    return (
+      <BookView
+        book={book}
+        highlightPhrase={highlightPhrase}
+        showTts={showTts}
+      />
+    );
   }
   return (
     <div className="plain-reading" lang="en">
@@ -115,7 +126,7 @@ export const ReadingOutput = memo(function ReadingOutput({
           <span className="book-sentence-text">
             {textWithOptionalHighlight(sent, highlightPhrase)}
           </span>
-          <TtsPlayButton text={sent} />
+          {showTts ? <TtsPlayButton text={sent} /> : null}
         </div>
       ))}
     </div>
